@@ -59,9 +59,6 @@ chat_history = ChatHistory()
 chat_history.add_system_message(
     "You are a helpful chatbot who is good about giving book recommendations."
 )
-arguments = KernelArguments(
-    user_input="Hi, I'm looking for book suggestions", history=chat_history
-)
 
 
 async def chat(input_text: str) -> None:
@@ -81,10 +78,10 @@ async def chat(input_text: str) -> None:
 
 
 async def main():
+    await chat("Hi, I'm looking for book suggestions")
     await chat(
         "I love history and philosophy, I'd like to learn something new about Greece, any suggestion?"
     )
-    await chat("that sounds interesting, what is it about?")
     print(chat_history)
 
 
