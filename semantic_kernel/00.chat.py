@@ -6,6 +6,7 @@ import os
 import asyncio
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 script_dir = Path(__file__).parent
@@ -20,19 +21,23 @@ kernel.add_service(
         async_client=AsyncOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_URL"),
-        )
+        ),
     )
 )
 
 plugins_directory = script_dir.parent / "prompt_template_samples"
-funFunctions = kernel.add_plugin(parent_directory=str(
-    plugins_directory), plugin_name="FunPlugin")
+funFunctions = kernel.add_plugin(
+    parent_directory=str(plugins_directory), plugin_name="FunPlugin"
+)
 
 jokeFunction = funFunctions["Joke"]
 
 
 async def main():
-    result = await kernel.invoke(jokeFunction, input="travel to dinosaur age", style="silly")
+    result = await kernel.invoke(
+        jokeFunction, input="travel to dinosaur age", style="silly"
+    )
     print(result)
+
 
 asyncio.run(main())

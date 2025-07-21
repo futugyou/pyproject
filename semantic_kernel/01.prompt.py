@@ -7,6 +7,7 @@ import os
 import asyncio
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 script_dir = Path(__file__).parent
@@ -21,7 +22,7 @@ kernel.add_service(
         async_client=AsyncOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_URL"),
-        )
+        ),
     )
 )
 prompt = """{{$input}}
@@ -32,8 +33,7 @@ prompt_template_config = PromptTemplateConfig(
     name="summarize",
     template_format="semantic-kernel",
     input_variables=[
-        InputVariable(name="input", description="The user input",
-                      is_required=True),
+        InputVariable(name="input", description="The user input", is_required=True),
     ],
 )
 
@@ -58,5 +58,6 @@ Demo, like Julia Balbilla, writes in the artificial and poetic Aeolic dialect. T
 async def main():
     summary = await kernel.invoke(summarize, input=input_text)
     print(summary)
+
 
 asyncio.run(main())
