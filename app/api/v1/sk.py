@@ -42,8 +42,7 @@ async def sk_prompt(request: PromptRequest, kernel=Depends(get_kernel)):
         name="summarize",
         template_format="semantic-kernel",
         input_variables=[
-            InputVariable(
-                name="input", description="The user input", is_required=True),
+            InputVariable(name="input", description="The user input", is_required=True),
         ],
     )
 
@@ -89,17 +88,26 @@ async def sk_argument(kernel=Depends(get_kernel)):
     chat_history.add_system_message(
         "You are a helpful chatbot who is good about giving book recommendations."
     )
-    await chat("Hi, I'm looking for book suggestions", kernel, chat_function, chat_history)
     await chat(
-        "I love history and philosophy, I'd like to learn something new about Greece, any suggestion?", kernel, chat_function, chat_history
+        "Hi, I'm looking for book suggestions", kernel, chat_function, chat_history
+    )
+    await chat(
+        "I love history and philosophy, I'd like to learn something new about Greece, any suggestion?",
+        kernel,
+        chat_function,
+        chat_history,
     )
     return chat_history
 
 
-async def chat(input_text: str, kernel: Kernel, chat_function: KernelFunction, chat_history: ChatHistory) -> None:
+async def chat(
+    input_text: str,
+    kernel: Kernel,
+    chat_function: KernelFunction,
+    chat_history: ChatHistory,
+) -> None:
     answer = await kernel.invoke(
-        chat_function, KernelArguments(
-            user_input=input_text, history=chat_history)
+        chat_function, KernelArguments(user_input=input_text, history=chat_history)
     )
     chat_history.add_user_message(input_text)
     chat_history.add_assistant_message(str(answer))

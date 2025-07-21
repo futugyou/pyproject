@@ -1,30 +1,9 @@
 from semantic_kernel.prompt_template import InputVariable, PromptTemplateConfig
-from pathlib import Path
 from openai import AsyncOpenAI
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel import Kernel
-import os
 import asyncio
 
-from dotenv import load_dotenv
+from service import kernel
 
-load_dotenv()
-
-script_dir = Path(__file__).parent
-service_id = "default"
-
-kernel = Kernel()
-kernel.add_service(
-    OpenAIChatCompletion(
-        ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID"),
-        service_id=service_id,
-        # api_key=os.getenv("OPENAI_API_KEY"),
-        async_client=AsyncOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_URL"),
-        ),
-    )
-)
 prompt = """{{$input}}
 Summarize the content above.
 """
@@ -54,10 +33,10 @@ In the poem, Demo explains that Memnon has shown her special respect. In return,
 Demo, like Julia Balbilla, writes in the artificial and poetic Aeolic dialect. The language indicates she was knowledgeable in Homeric poetry—'bearing a pleasant gift', for example, alludes to the use of that phrase throughout the Iliad and Odyssey.[a][2]
 """
 
+if __name__ == "__main__":
 
-async def main():
-    summary = await kernel.invoke(summarize, input=input_text)
-    print(summary)
+    async def main():
+        summary = await kernel.invoke(summarize, input=input_text)
+        print(summary)
 
-
-asyncio.run(main())
+    asyncio.run(main())
