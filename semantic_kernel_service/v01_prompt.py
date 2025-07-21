@@ -1,8 +1,7 @@
+from semantic_kernel import Kernel
 from semantic_kernel.prompt_template import InputVariable, PromptTemplateConfig
-from openai import AsyncOpenAI
 import asyncio
 
-from service import kernel
 
 prompt = """{{$input}}
 Summarize the content above.
@@ -16,11 +15,6 @@ prompt_template_config = PromptTemplateConfig(
     ],
 )
 
-summarize = kernel.add_function(
-    function_name="summarizeFunc",
-    plugin_name="summarizePlugin",
-    prompt_template_config=prompt_template_config,
-)
 input_text = """
 Demo (ancient Greek poet)
 From Wikipedia, the free encyclopedia
@@ -33,10 +27,23 @@ In the poem, Demo explains that Memnon has shown her special respect. In return,
 Demo, like Julia Balbilla, writes in the artificial and poetic Aeolic dialect. The language indicates she was knowledgeable in Homeric poetry—'bearing a pleasant gift', for example, alludes to the use of that phrase throughout the Iliad and Odyssey.[a][2]
 """
 
+
+async def generate_summarize(kernel: Kernel, input_text: str) -> str:
+    summarize = kernel.add_function(
+        function_name="summarizeFunc",
+        plugin_name="summarizePlugin",
+        prompt_template_config=prompt_template_config,
+    )
+    summary = await kernel.invoke(summarize, input=input_text)
+    return str(summary)
+
+
 if __name__ == "__main__":
 
     async def main():
-        summary = await kernel.invoke(summarize, input=input_text)
+        from service import kernel
+
+        summary = await generate_summarize(kernel, input_text)
         print(summary)
 
     asyncio.run(main())
