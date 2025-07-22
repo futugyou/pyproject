@@ -4,7 +4,7 @@ python project
 ## local
 
 ```
-pip install -r requirements.txt
+pip install --pre -r requirements.txt
 
 uvicorn app.main:app --reload
 ```
