@@ -18,6 +18,7 @@ The story must be:
 - No sexism, racism or other bias/bigotry
 - Be exactly {{$paragraph_count}} paragraphs long
 - Be written in this language: {{$language}}
+- The two names of the corgis are {{GenerateNames.generate_names}}
 """
 
 prompt_template_config = PromptTemplateConfig(
@@ -30,7 +31,27 @@ prompt_template_config = PromptTemplateConfig(
     ],
 )
 
+class GenerateNamesPlugin:
+    """
+    Description: Generate character names.
+    """
 
+    # The default function name will be the name of the function itself, however you can override this
+    # by setting the name=<name override> in the @kernel_function decorator. In this case, we're using
+    # the same name as the function name for simplicity.
+    @kernel_function(description="Generate character names", name="generate_names")
+    def generate_names(self) -> str:
+        """
+        Generate two names.
+        Returns:
+            str
+        """
+        names = {"Hoagie", "Hamilton", "Bacon", "Pizza", "Boots", "Shorts", "Tuna"}
+        first_name = random.choice(list(names))
+        names.remove(first_name)
+        second_name = random.choice(list(names))
+        return f"{first_name}, {second_name}"
+        
 class GenerateNumberPlugin:
     """
     Description: Generate a number between a min and a max.
@@ -65,6 +86,7 @@ class GenerateNumberPlugin:
 async def generate_kernel_plugin_function(
     kernel: Kernel,
 ) -> tuple[KernelPlugin, KernelFunction]:
+    kernel.add_plugin(GenerateNamesPlugin(), plugin_name="GenerateNames")
     func = kernel.add_function(
         function_name="CorgiStory",
         plugin_name="CorgiPlugin",
