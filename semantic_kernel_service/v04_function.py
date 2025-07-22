@@ -6,6 +6,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 )
 from semantic_kernel.prompt_template import InputVariable, PromptTemplateConfig
 from pathlib import Path
+from typing import Annotated
 import asyncio
 import random
 
@@ -15,7 +16,8 @@ The story must be:
 - G rated
 - Have a positive message
 - No sexism, racism or other bias/bigotry
-- Be exactly {{$input}} paragraphs long. It must be this length.
+- Be exactly {{$paragraph_count}} paragraphs long
+- Be written in this language: {{$language}}
 """
 
 prompt_template_config = PromptTemplateConfig(
@@ -23,34 +25,40 @@ prompt_template_config = PromptTemplateConfig(
     name="story",
     template_format="semantic-kernel",
     input_variables=[
-        InputVariable(name="input", description="The user input", is_required=True),
+        InputVariable(name="paragraph_count", description="The number of paragraphs", is_required=True),
+        InputVariable(name="language", description="The language of the story", is_required=True),
     ],
 )
 
 
 class GenerateNumberPlugin:
     """
-    Description: Generate a number between 3-x.
+    Description: Generate a number between a min and a max.
     """
 
     @kernel_function(
-        description="Generate a random number between 3-x",
-        name="GenerateNumberThreeOrHigher",
+        name="GenerateNumber",
+        description="Generate a random number between min and max",
     )
-    def generate_number_three_or_higher(self, input: str) -> str:
+    def generate_number(
+        self,
+        min: Annotated[int, "the minimum number of paragraphs"],
+        max: Annotated[int, "the maximum number of paragraphs"] = 10,
+    ) -> Annotated[int, "the output is a number"]:
         """
-        Generate a number between 3-<input>
+        Generate a number between min-max
         Example:
-            "8" => rand(3,8)
+            min="4" max="10" => rand(4,8)
         Args:
-            input -- The upper limit for the random number generation
+            min -- The lower limit for the random number generation
+            max -- The upper limit for the random number generation
         Returns:
             int value
         """
         try:
-            return str(random.randint(3, int(input)))
+            return str(random.randint(min, max))
         except ValueError as e:
-            print(f"Invalid input {input}")
+            print(f"Invalid input {min} and {max}")
             raise e
 
 
@@ -75,10 +83,10 @@ if __name__ == "__main__":
         from service import kernel
 
         plugin, func = await generate_kernel_plugin_function(kernel)
-        generate_number_three_or_higher = plugin["GenerateNumberThreeOrHigher"]
-        number_result = await generate_number_three_or_higher(kernel, input=6)
+        generateNumber = plugin["GenerateNumber"]
+        number_result = await generateNumber(kernel, min=1, max=5)
         print(number_result)
-        story = await func.invoke(kernel, input=number_result.value)
+        story = await func.invoke(kernel, paragraph_count=number_result.value, language="Spanish")
         print(
             f"Generating a corgi story exactly {number_result.value} paragraphs long."
         )
