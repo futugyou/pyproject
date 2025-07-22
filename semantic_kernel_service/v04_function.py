@@ -26,10 +26,17 @@ prompt_template_config = PromptTemplateConfig(
     name="story",
     template_format="semantic-kernel",
     input_variables=[
-        InputVariable(name="paragraph_count", description="The number of paragraphs", is_required=True),
-        InputVariable(name="language", description="The language of the story", is_required=True),
+        InputVariable(
+            name="paragraph_count",
+            description="The number of paragraphs",
+            is_required=True,
+        ),
+        InputVariable(
+            name="language", description="The language of the story", is_required=True
+        ),
     ],
 )
+
 
 class GenerateNamesPlugin:
     """
@@ -51,7 +58,8 @@ class GenerateNamesPlugin:
         names.remove(first_name)
         second_name = random.choice(list(names))
         return f"{first_name}, {second_name}"
-        
+
+
 class GenerateNumberPlugin:
     """
     Description: Generate a number between a min and a max.
@@ -93,9 +101,7 @@ async def generate_kernel_plugin_function(
         prompt_template_config=prompt_template_config,
     )
 
-    plugin = kernel.add_plugin(
-        GenerateNumberPlugin(), "GenerateNumberPlugin"
-    )
+    plugin = kernel.add_plugin(GenerateNumberPlugin(), "GenerateNumberPlugin")
     return plugin, func
 
 
@@ -108,7 +114,9 @@ if __name__ == "__main__":
         generateNumber = plugin["GenerateNumber"]
         number_result = await generateNumber(kernel, min=1, max=5)
         print(number_result)
-        story = await func.invoke(kernel, paragraph_count=number_result.value, language="Spanish")
+        story = await func.invoke(
+            kernel, paragraph_count=number_result.value, language="Spanish"
+        )
         print(
             f"Generating a corgi story exactly {number_result.value} paragraphs long."
         )
