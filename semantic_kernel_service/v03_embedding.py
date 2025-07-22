@@ -9,6 +9,9 @@ from semantic_kernel.data.vector import (
     vectorstoremodel,
     VectorSearchProtocol,
 )
+from semantic_kernel.functions import KernelFunction
+from semantic_kernel.prompt_template import PromptTemplateConfig
+
 
 @vectorstoremodel(collection_name="simple-model")
 @dataclass
@@ -20,6 +23,7 @@ class SimpleModel:
     embedding: Annotated[
         list[float] | str | None, VectorStoreField("vector", dimensions=1536)
     ] = None
+
     def __post_init__(self):
         if self.embedding is None:
             self.embedding = self.text
@@ -35,13 +39,12 @@ records = [
 async def init_embedding(kernel: Kernel) -> VectorSearchProtocol:
     in_memory_store = InMemoryStore()
     embedding_gen = kernel.get_service(service_id="embedding")
-    
+
     collection = in_memory_store.get_collection(record_type=SimpleModel)
     await collection.ensure_collection_exists()
     collection.embedding_generator = embedding_gen
     await collection.upsert(records)
     return collection
-
 
 
 async def search_memory_examples(
@@ -53,6 +56,60 @@ async def search_memory_examples(
         async for result in results.results:
             print(f"Answer: {result.record.text}")
             print(f"Score: {result.score}\n")
+
+
+async def setup_chat_with_memory(
+    kernel: Kernel,
+    service_id: str,
+) -> KernelFunction:
+    prompt = """
+    ChatBot can have a conversation with you about any topic.
+    It can give explicit instructions or say 'I don't know' if
+    it does not have an answer.
+
+    Information about me, from previous conversations:
+    - {{recall 'budget by year'}} What is my budget for 2024?
+    - {{recall 'savings from previous year'}} What are my savings from 2023?
+    - {{recall 'investments'}} What are my investments?
+
+    {{$request}}
+    """.strip()
+
+    prompt_template_config = PromptTemplateConfig(
+        template=prompt,
+        execution_settings={
+            service_id: kernel.get_service(
+                service_id
+            ).get_prompt_execution_settings_class()(service_id=service_id)
+        },
+    )
+
+    return kernel.add_function(
+        function_name="chat_with_memory",
+        plugin_name="chat",
+        prompt_template_config=prompt_template_config,
+    )
+
+
+async def setup_recall_function(
+    kernel: Kernel,
+    collection: VectorSearchProtocol,
+) -> KernelFunction:
+    function = kernel.add_function(
+        plugin_name="memory",
+        function=collection.create_search_function(
+            function_name="recall",
+            description="Searches the memory for relevant information based on the input query.",
+        ),
+    )
+
+    return function
+
+
+async def chat(user_input: str, chat_func: KernelFunction, kernel: Kernel):
+    print(f"User: {user_input}")
+    answer = await kernel.invoke(chat_func, request=user_input)
+    print(f"ChatBot:> {answer}")
 
 
 if __name__ == "__main__":
@@ -70,5 +127,9 @@ if __name__ == "__main__":
                 "What are my investments?",
             ],
         )
+
+        await setup_recall_function(kernel, collection)
+        chat_func = await setup_chat_with_memory(kernel, "default")
+        await chat("What is my budget for 2024?", chat_func, kernel)
 
     asyncio.run(main())
