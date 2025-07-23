@@ -1,6 +1,6 @@
 import asyncio
 
-from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
 
 USER_INPUTS = [
     "Why is the sky blue?",
@@ -17,15 +17,19 @@ async def main():
         name="Assistant",
         instructions="Answer questions about the world in one sentence.",
     )
-
+    thread: ChatHistoryAgentThread = None
     for user_input in USER_INPUTS:
         print(f"# User: {user_input}")
         # 2. Invoke the agent for a response
         response = await agent.get_response(
             messages=user_input,
+            thread=thread,
         )
+        thread = response.thread
         # 3. Print the response
         print(f"# {response.name}: {response}")
+
+    await thread.delete() if thread else None
 
 
 if __name__ == "__main__":
