@@ -5,10 +5,18 @@ from semantic_kernel.agents import (
     ChatCompletionAgent,
     ChatHistoryAgentThread,
 )
-from semantic_kernel.agents.strategies import TerminationStrategy
+from semantic_kernel.agents.strategies import (
+    TerminationStrategy,
+    KernelFunctionSelectionStrategy,
+    KernelFunctionTerminationStrategy,
+)
 from semantic_kernel.connectors.ai import FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel.functions import kernel_function, KernelArguments
+from semantic_kernel.functions import (
+    kernel_function,
+    KernelArguments,
+    KernelFunctionFromPrompt,
+)
 from openai import AsyncOpenAI
 from typing import Annotated
 import os
@@ -61,6 +69,35 @@ Consider suggestions when refining an idea.
 
 TASK = "a slogan for a new line of electric cars."
 
+termination_function = KernelFunctionFromPrompt(
+    function_name="termination",
+    prompt="""
+    Determine if the copy has been approved.  If so, respond with a single word: yes
+    History:
+    {{$history}}
+    """,
+)
+
+selection_function = KernelFunctionFromPrompt(
+    function_name="selection",
+    prompt=f"""
+    Determine which participant takes the next turn in a conversation based on the the most recent participant.
+    State only the name of the participant to take the next turn.
+    No participant should take more than one turn in a row.
+    
+    Choose only from these participants:
+    - {REVIEWER_NAME}
+    - {COPYWRITER_NAME}
+    
+    Always follow these rules when selecting the next participant:
+    - After user input, it is {COPYWRITER_NAME}'s turn.
+    - After {COPYWRITER_NAME} replies, it is {REVIEWER_NAME}'s turn.
+    - After {REVIEWER_NAME} provides feedback, it is {COPYWRITER_NAME}'s turn.
+    History:
+    {{{{$history}}}}
+    """,
+)
+
 
 async def main():
     # 1. Create the reviewer agent based on the chat completion service
@@ -79,13 +116,27 @@ async def main():
 
     # 3. Place the agents in a group chat with a custom termination strategy
     group_chat = AgentGroupChat(
-        agents=[
-            agent_writer,
-            agent_reviewer,
-        ],
-        termination_strategy=ApprovalTerminationStrategy(
+        agents=[agent_writer, agent_reviewer],
+        termination_strategy=KernelFunctionTerminationStrategy(
             agents=[agent_reviewer],
+            function=termination_function,
+            kernel=_create_kernel_with_chat_completion("termination"),
+            result_parser=lambda result: str(result.value[0]).lower() == "yes",
+            history_variable_name="history",
             maximum_iterations=6,
+        ),
+        # termination_strategy=ApprovalTerminationStrategy(
+        #     agents=[agent_reviewer],
+        #     maximum_iterations=6,
+        # ),
+        selection_strategy=KernelFunctionSelectionStrategy(
+            function=selection_function,
+            kernel=_create_kernel_with_chat_completion("selection"),
+            result_parser=lambda result: str(result.value[0])
+            if result.value is not None
+            else COPYWRITER_NAME,
+            agent_variable_name="agents",
+            history_variable_name="history",
         ),
     )
 
