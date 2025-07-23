@@ -1,15 +1,18 @@
 import asyncio
 from semantic_kernel import Kernel
 from semantic_kernel.agents import (
-    AgentGroupChat,
+    GroupChatOrchestration,
+    RoundRobinGroupChatManager,
     ChatCompletionAgent,
     ChatHistoryAgentThread,
 )
+from semantic_kernel.agents.runtime import InProcessRuntime
 from semantic_kernel.agents.strategies import (
     TerminationStrategy,
     KernelFunctionSelectionStrategy,
     KernelFunctionTerminationStrategy,
 )
+from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai import FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import (
@@ -97,13 +100,15 @@ selection_function = KernelFunctionFromPrompt(
     {{{{$history}}}}
     """,
 )
-
+def agent_response_callback(message: ChatMessageContent) -> None:
+    print(f"**{message.name}**\n{message.content}")
 
 async def main():
     # 1. Create the reviewer agent based on the chat completion service
     agent_reviewer = ChatCompletionAgent(
         kernel=_create_kernel_with_chat_completion("artdirector"),
         name=REVIEWER_NAME,
+        description="An art director who has opinions about copywriting born of a love for David Ogilvy.",
         instructions=REVIEWER_INSTRUCTIONS,
     )
 
@@ -111,42 +116,56 @@ async def main():
     agent_writer = ChatCompletionAgent(
         kernel=_create_kernel_with_chat_completion("copywriter"),
         name=COPYWRITER_NAME,
+        description="A copywriter with ten years of experience and is known for brevity and a dry humor.",
         instructions=COPYWRITER_INSTRUCTIONS,
     )
 
     # 3. Place the agents in a group chat with a custom termination strategy
-    group_chat = AgentGroupChat(
-        agents=[agent_writer, agent_reviewer],
-        termination_strategy=KernelFunctionTerminationStrategy(
-            agents=[agent_reviewer],
-            function=termination_function,
-            kernel=_create_kernel_with_chat_completion("termination"),
-            result_parser=lambda result: str(result.value[0]).lower() == "yes",
-            history_variable_name="history",
-            maximum_iterations=6,
-        ),
-        # termination_strategy=ApprovalTerminationStrategy(
-        #     agents=[agent_reviewer],
-        #     maximum_iterations=6,
-        # ),
-        selection_strategy=KernelFunctionSelectionStrategy(
-            function=selection_function,
-            kernel=_create_kernel_with_chat_completion("selection"),
-            result_parser=lambda result: str(result.value[0])
-            if result.value is not None
-            else COPYWRITER_NAME,
-            agent_variable_name="agents",
-            history_variable_name="history",
-        ),
+    orchestration = GroupChatOrchestration(
+        members=[agent_writer, agent_reviewer],
+        manager=RoundRobinGroupChatManager(max_rounds=5),
+        agent_response_callback=agent_response_callback,
     )
+    runtime = InProcessRuntime()
+    runtime.start()
+
+    orchestration_result = await orchestration.invoke(task=TASK, runtime=runtime)
+    value = await orchestration_result.get()
+    print(f"***** Result *****\n{value}")
+    await runtime.stop_when_idle()
+
+    # group_chat = AgentGroupChat(
+    #     agents=[agent_writer, agent_reviewer],
+    #     termination_strategy=KernelFunctionTerminationStrategy(
+    #         agents=[agent_reviewer],
+    #         function=termination_function,
+    #         kernel=_create_kernel_with_chat_completion("termination"),
+    #         result_parser=lambda result: str(result.value[0]).lower() == "yes",
+    #         history_variable_name="history",
+    #         maximum_iterations=6,
+    #     ),
+    #     # termination_strategy=ApprovalTerminationStrategy(
+    #     #     agents=[agent_reviewer],
+    #     #     maximum_iterations=6,
+    #     # ),
+    #     selection_strategy=KernelFunctionSelectionStrategy(
+    #         function=selection_function,
+    #         kernel=_create_kernel_with_chat_completion("selection"),
+    #         result_parser=lambda result: str(result.value[0])
+    #         if result.value is not None
+    #         else COPYWRITER_NAME,
+    #         agent_variable_name="agents",
+    #         history_variable_name="history",
+    #     ),
+    # )
 
     # 4. Add the task as a message to the group chat
-    await group_chat.add_chat_message(message=TASK)
-    print(f"# User: {TASK}")
+    # await group_chat.add_chat_message(message=TASK)
+    # print(f"# User: {TASK}")
 
-    # 5. Invoke the chat
-    async for content in group_chat.invoke():
-        print(f"# {content.name}: {content.content}")
+    # # 5. Invoke the chat
+    # async for content in group_chat.invoke():
+    #     print(f"# {content.name}: {content.content}")
 
 
 if __name__ == "__main__":
