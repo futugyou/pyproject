@@ -1,0 +1,102 @@
+import asyncio
+from semantic_kernel import Kernel
+from semantic_kernel.agents import (
+    AgentGroupChat,
+    ChatCompletionAgent,
+    ChatHistoryAgentThread,
+)
+from semantic_kernel.agents.strategies import TerminationStrategy
+from semantic_kernel.connectors.ai import FunctionChoiceBehavior
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.functions import kernel_function, KernelArguments
+from openai import AsyncOpenAI
+from typing import Annotated
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _create_kernel_with_chat_completion(service_id: str) -> Kernel:
+    kernel = Kernel()
+    chat_completion_service = OpenAIChatCompletion(
+        ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID"),
+        service_id=service_id,
+        async_client=AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_URL"),
+        ),
+    )
+
+    kernel.add_service(chat_completion_service)
+    return kernel
+
+
+class ApprovalTerminationStrategy(TerminationStrategy):
+    """A strategy for determining when an agent should terminate."""
+
+    async def should_agent_terminate(self, agent, history):
+        """Check if the agent should terminate."""
+        last_message = history[-1].content.lower()
+        return "approved" in last_message and "not approved" not in last_message
+
+
+REVIEWER_NAME = "ArtDirector"
+REVIEWER_INSTRUCTIONS = """
+You are an art director who has opinions about copywriting born of a love for David Ogilvy.
+The goal is to determine if the given copy is acceptable to print.
+If so, state that it is approved.
+If not, provide insight on how to refine suggested copy without example.
+"""
+
+COPYWRITER_NAME = "CopyWriter"
+COPYWRITER_INSTRUCTIONS = """
+You are a copywriter with ten years of experience and are known for brevity and a dry humor.
+The goal is to refine and decide on the single best copy as an expert in the field.
+Only provide a single proposal per response.
+You're laser focused on the goal at hand.
+Don't waste time with chit chat.
+Consider suggestions when refining an idea.
+"""
+
+TASK = "a slogan for a new line of electric cars."
+
+
+async def main():
+    # 1. Create the reviewer agent based on the chat completion service
+    agent_reviewer = ChatCompletionAgent(
+        kernel=_create_kernel_with_chat_completion("artdirector"),
+        name=REVIEWER_NAME,
+        instructions=REVIEWER_INSTRUCTIONS,
+    )
+
+    # 2. Create the copywriter agent based on the chat completion service
+    agent_writer = ChatCompletionAgent(
+        kernel=_create_kernel_with_chat_completion("copywriter"),
+        name=COPYWRITER_NAME,
+        instructions=COPYWRITER_INSTRUCTIONS,
+    )
+
+    # 3. Place the agents in a group chat with a custom termination strategy
+    group_chat = AgentGroupChat(
+        agents=[
+            agent_writer,
+            agent_reviewer,
+        ],
+        termination_strategy=ApprovalTerminationStrategy(
+            agents=[agent_reviewer],
+            maximum_iterations=6,
+        ),
+    )
+
+    # 4. Add the task as a message to the group chat
+    await group_chat.add_chat_message(message=TASK)
+    print(f"# User: {TASK}")
+
+    # 5. Invoke the chat
+    async for content in group_chat.invoke():
+        print(f"# {content.name}: {content.content}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
