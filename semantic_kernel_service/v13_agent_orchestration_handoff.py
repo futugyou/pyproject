@@ -12,6 +12,7 @@ from semantic_kernel.contents import (
     ChatMessageContent,
     FunctionCallContent,
     FunctionResultContent,
+    StreamingChatMessageContent,
 )
 from semantic_kernel.functions import kernel_function
 
@@ -112,6 +113,43 @@ def get_agents() -> tuple[list[Agent], OrchestrationHandoffs]:
     ], handoffs
 
 
+def streaming_agent_response_callback(
+    message: StreamingChatMessageContent, is_final: bool
+) -> None:
+    """Observer function to print the messages from the agents.
+
+    Please note that this function is called whenever the agent generates a response,
+    including the internal processing messages (such as tool calls) that are not visible
+    to other agents in the orchestration.
+
+    In streaming mode, the FunctionCallContent and FunctionResultContent are provided as a
+    complete message.
+
+    Args:
+        message (StreamingChatMessageContent): The streaming message content from the agent.
+        is_final (bool): Indicates if this is the final part of the message.
+    """
+    global is_new_message
+    if is_new_message:
+        print(f"{message.name}: ", end="", flush=True)
+        is_new_message = False
+    print(message.content, end="", flush=True)
+
+    for item in message.items:
+        if isinstance(item, FunctionCallContent):
+            print(
+                f"Calling '{item.name}' with arguments '{item.arguments}'",
+                end="",
+                flush=True,
+            )
+        if isinstance(item, FunctionResultContent):
+            print(f"Result from '{item.name}' is '{item.result}'", end="", flush=True)
+
+    if is_final:
+        print()
+        is_new_message = True
+
+
 def agent_response_callback(message: ChatMessageContent) -> None:
     """Observer function to print the messages from the agents.
 
@@ -140,7 +178,8 @@ async def main():
     handoff_orchestration = HandoffOrchestration(
         members=agents,
         handoffs=handoffs,
-        agent_response_callback=agent_response_callback,
+        # agent_response_callback=agent_response_callback,
+        streaming_agent_response_callback=streaming_agent_response_callback,
         human_response_function=human_response_function,
     )
 
