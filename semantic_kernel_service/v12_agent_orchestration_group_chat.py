@@ -1,15 +1,25 @@
 import asyncio
+import sys
 from pydantic import BaseModel
-import logging
+if sys.version_info >= (3, 12):
+    from typing import override  # pragma: no cover
+else:
+    from typing_extensions import override  # pragma: no cover
 
-from semantic_kernel.agents import Agent, ChatCompletionAgent, GroupChatOrchestration, RoundRobinGroupChatManager
+from semantic_kernel.agents import (
+    Agent,
+    ChatCompletionAgent,
+    GroupChatOrchestration,
+    RoundRobinGroupChatManager,
+    BooleanResult,
+)
 from semantic_kernel.agents.orchestration.tools import structured_outputs_transform
 from semantic_kernel.agents.runtime import InProcessRuntime
-from semantic_kernel.contents import ChatMessageContent, StreamingChatMessageContent
-
-logging.basicConfig(level=logging.WARNING)  # Set default level to WARNING
-logging.getLogger("semantic_kernel.agents.orchestration.sequential").setLevel(
-    logging.DEBUG
+from semantic_kernel.contents import (
+    AuthorRole,
+    ChatHistory,
+    ChatMessageContent,
+    StreamingChatMessageContent,
 )
 
 
@@ -37,9 +47,44 @@ def get_agents() -> list[Agent]:
     return [writer, reviewer]
 
 
+class CustomRoundRobinGroupChatManager(RoundRobinGroupChatManager):
+    """Custom round robin group chat manager to enable user input."""
+
+    @override
+    async def should_request_user_input(
+        self, chat_history: ChatHistory
+    ) -> BooleanResult:
+        """Override the default behavior to request user input after the reviewer's message.
+
+        The manager will check if input from human is needed after each agent message.
+        """
+        if len(chat_history.messages) == 0:
+            return BooleanResult(
+                result=False,
+                reason="No agents have spoken yet.",
+            )
+        last_message = chat_history.messages[-1]
+        if last_message.name == "Reviewer":
+            return BooleanResult(
+                result=True,
+                reason="User input is needed after the reviewer's message.",
+            )
+
+        return BooleanResult(
+            result=False,
+            reason="User input is not needed if the last message is not from the reviewer.",
+        )
+
+
 def agent_response_callback(message: ChatMessageContent) -> None:
     """Observer function to print the messages from the agents."""
     print(f"# {message.name}\n{message.content}")
+
+
+async def human_response_function(chat_histoy: ChatHistory) -> ChatMessageContent:
+    """Function to get user input."""
+    user_input = input("User: ")
+    return ChatMessageContent(role=AuthorRole.USER, content=user_input)
 
 
 is_new_message = True
@@ -71,7 +116,10 @@ async def main():
     group_chat_orchestration = GroupChatOrchestration(
         members=agents,
         # max_rounds is odd, so that the writer gets the last round
-        manager=RoundRobinGroupChatManager(max_rounds=5),
+        manager=CustomRoundRobinGroupChatManager(
+            max_rounds=5,
+            human_response_function=human_response_function,
+        ),
         agent_response_callback=agent_response_callback,
     )
 
