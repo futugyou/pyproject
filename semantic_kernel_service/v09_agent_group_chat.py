@@ -100,8 +100,11 @@ selection_function = KernelFunctionFromPrompt(
     {{{{$history}}}}
     """,
 )
+
+
 def agent_response_callback(message: ChatMessageContent) -> None:
     print(f"**{message.name}**\n{message.content}")
+
 
 async def main():
     # 1. Create the reviewer agent based on the chat completion service
