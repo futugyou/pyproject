@@ -1,51 +1,72 @@
 import asyncio
+from pydantic import BaseModel
 
 from semantic_kernel.agents import Agent, ChatCompletionAgent, ConcurrentOrchestration
+from semantic_kernel.agents.orchestration.tools import structured_outputs_transform
 from semantic_kernel.agents.runtime import InProcessRuntime
+
+
+class ArticleAnalysis(BaseModel):
+    """A model to hold the analysis of an article."""
+
+    themes: list[str]
+    sentiments: list[str]
+    entities: list[str]
 
 
 def get_agents() -> list[Agent]:
     from service import chat_completion_service
 
-    physics_agent = ChatCompletionAgent(
-        name="PhysicsExpert",
-        instructions="You are an expert in physics. You answer questions from a physics perspective.",
+    theme_agent = ChatCompletionAgent(
+        name="ThemeAgent",
+        instructions="You are an expert in identifying themes in articles. Given an article, identify the main themes.",
         service=chat_completion_service,
     )
-    chemistry_agent = ChatCompletionAgent(
-        name="ChemistryExpert",
-        instructions="You are an expert in chemistry. You answer questions from a chemistry perspective.",
+    sentiment_agent = ChatCompletionAgent(
+        name="SentimentAgent",
+        instructions="You are an expert in sentiment analysis. Given an article, identify the sentiment.",
+        service=chat_completion_service,
+    )
+    entity_agent = ChatCompletionAgent(
+        name="EntityAgent",
+        instructions="You are an expert in entity recognition. Given an article, extract the entities.",
         service=chat_completion_service,
     )
 
-    return [physics_agent, chemistry_agent]
+    return [theme_agent, sentiment_agent, entity_agent]
+
+
+task = """
+On a dark winter night, a ghost walks the ramparts of Elsinore Castle in Denmark. Discovered first by a pair of watchmen, then by the scholar Horatio, the ghost resembles the recently deceased King Hamlet, whose brother Claudius has inherited the throne and married the king’s widow, Queen Gertrude. When Horatio and the watchmen bring Prince Hamlet, the son of Gertrude and the dead king, to see the ghost, it speaks to him, declaring ominously that it is indeed his father’s spirit, and that he was murdered by none other than Claudius. Ordering Hamlet to seek revenge on the man who usurped his throne and married his wife, the ghost disappears with the dawn.
+"""
+
 
 async def main():
-    """Main function to run the agents."""
-    # 1. Create a concurrent orchestration with multiple agents
-    agents = get_agents()
-    concurrent_orchestration = ConcurrentOrchestration(members=agents)
+    from service import chat_completion_service
 
-    # 2. Create a runtime and start it
+    agents = get_agents()
+    concurrent_orchestration = ConcurrentOrchestration[str, ArticleAnalysis](
+        members=agents,
+        output_transform=structured_outputs_transform(
+            ArticleAnalysis, chat_completion_service
+        ),
+    )
+
     runtime = InProcessRuntime()
     runtime.start()
 
-    # 3. Invoke the orchestration with a task and the runtime
     orchestration_result = await concurrent_orchestration.invoke(
-        task="What is temperature?",
+        task=task,
         runtime=runtime,
     )
 
-    # 4. Wait for the results
-    # Note: the order of the results is not guaranteed to be the same
-    # as the order of the agents in the orchestration.
     value = await orchestration_result.get(timeout=20)
-    for item in value:
-        print(f"# {item.name}: {item.content}")
+    if isinstance(value, ArticleAnalysis):
+        print(value.model_dump_json(indent=2))
+    else:
+        print("Unexpected result type:", type(value))
 
-    # 5. Stop the runtime after the invocation is complete
     await runtime.stop_when_idle()
-
 
 
 if __name__ == "__main__":
