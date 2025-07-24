@@ -1,10 +1,16 @@
 import asyncio
 from pydantic import BaseModel
+import logging
 
 from semantic_kernel.agents import Agent, ChatCompletionAgent, SequentialOrchestration
 from semantic_kernel.agents.orchestration.tools import structured_outputs_transform
 from semantic_kernel.agents.runtime import InProcessRuntime
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent, StreamingChatMessageContent
+
+logging.basicConfig(level=logging.WARNING)  # Set default level to WARNING
+logging.getLogger("semantic_kernel.agents.orchestration.sequential").setLevel(
+    logging.DEBUG
+)
 
 
 def get_agents() -> list[Agent]:
@@ -47,13 +53,36 @@ def agent_response_callback(message: ChatMessageContent) -> None:
     print(f"# {message.name}\n{message.content}")
 
 
+is_new_message = True
+
+
+def streaming_agent_response_callback(
+    message: StreamingChatMessageContent, is_final: bool
+) -> None:
+    """Observer function to print the messages from the agents.
+
+    Args:
+        message (StreamingChatMessageContent): The streaming message content from the agent.
+        is_final (bool): Indicates if this is the final part of the message.
+    """
+    global is_new_message
+    if is_new_message:
+        print(f"# {message.name}")
+        is_new_message = False
+    print(message.content, end="", flush=True)
+    if is_final:
+        print()
+        is_new_message = True
+
+
 async def main():
     from service import chat_completion_service
 
     agents = get_agents()
     sequential_orchestration = SequentialOrchestration(
         members=agents,
-        agent_response_callback=agent_response_callback,
+        # agent_response_callback=agent_response_callback,
+        streaming_agent_response_callback=streaming_agent_response_callback,
     )
 
     runtime = InProcessRuntime()
@@ -63,10 +92,18 @@ async def main():
         runtime=runtime,
     )
 
-    value = await orchestration_result.get(timeout=20)
-    print(f"***** Final Result *****\n{value}")
+    # await asyncio.sleep(1)  # Simulate some delay before cancellation
+    # orchestration_result.cancel()
 
-    await runtime.stop_when_idle()
+    try:
+        # Attempt to get the result will result in an exception due to cancellation
+        value = await orchestration_result.get(timeout=20)
+        print(f"***** Final Result *****\n{value}")
+    except Exception as e:
+        print(e)
+    finally:
+        # 5. Stop the runtime
+        await runtime.stop_when_idle()
 
 
 if __name__ == "__main__":
