@@ -61,7 +61,9 @@ async def main():
     )
 
     # Although the name is specified, it is displayed as empty in the result.
-    assistant.register_for_llm(name="calculator", description="A simple calculator")(calculator)
+    assistant.register_for_llm(name="calculator", description="A simple calculator")(
+        calculator
+    )
     user_proxy.register_for_execution(name="calculator")(calculator)
 
     # register_function(
