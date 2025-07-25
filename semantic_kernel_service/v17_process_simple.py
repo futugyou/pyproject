@@ -27,20 +27,24 @@ from semantic_kernel.processes.local_runtime.local_event import KernelProcessEve
 from semantic_kernel.processes.local_runtime.local_kernel_process import start
 from semantic_kernel.processes.process_builder import ProcessBuilder
 
+
 class StartStep(KernelProcessStep):
     @kernel_function
     async def print_intro_message(self):
         print("Step 1 - Start\n")
+
 
 class DoSomeWorkStep(KernelProcessStep):
     @kernel_function
     async def print_intro_message(self):
         print("Step 2 - Doing Some Work...\n")
 
+
 class DoMoreWorkStep(KernelProcessStep):
     @kernel_function
     async def print_intro_message(self):
         print("Step 3 - Doing Yet More Work...\n")
+
 
 class LastStep(KernelProcessStep):
     @kernel_function
@@ -51,6 +55,7 @@ class LastStep(KernelProcessStep):
 class ProcessEvents(Enum):
     StartProcess = "StartProcess"
 
+
 async def step01_processes(kernel: Kernel, scripted: bool = True):
     process = ProcessBuilder(name="ChatBot")
 
@@ -58,7 +63,7 @@ async def step01_processes(kernel: Kernel, scripted: bool = True):
     do_some_work_step = process.add_step(DoSomeWorkStep)
     do_more_work_step = process.add_step(DoMoreWorkStep)
     last_step = process.add_step(LastStep)
- 
+
     process.on_input_event(event_id=ProcessEvents.StartProcess).send_event_to(
         target=start_step
     )
