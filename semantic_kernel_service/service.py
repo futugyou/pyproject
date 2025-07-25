@@ -5,8 +5,10 @@ from semantic_kernel.connectors.ai.google.google_ai import (
     GoogleAITextEmbedding,
 )
 from openai import AsyncOpenAI
+from mem0 import MemoryClient
 import os
 from dotenv import load_dotenv
+
 
 load_dotenv()
 kernel = Kernel()
@@ -27,3 +29,5 @@ text_embedding_service = GoogleAITextEmbedding(
     api_key=os.getenv("GOOGLE_API_KEY"),
 )
 kernel.add_service(text_embedding_service)
+
+memoryClient = MemoryClient(api_key=os.getenv("MEM0_API_KEY"))
