@@ -1,9 +1,26 @@
 import asyncio
 
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
+from semantic_kernel.filters import AutoFunctionInvocationContext, FilterTypes
 from semantic_kernel.connectors.ai import FunctionChoiceBehavior
 from typing import Annotated
 from semantic_kernel.functions import kernel_function, KernelArguments
+from service import kernel, chat_completion_service
+
+
+@kernel.filter(FilterTypes.AUTO_FUNCTION_INVOCATION)
+async def auto_function_invocation_filter(context: AutoFunctionInvocationContext, next):
+    """A filter that will be called for each function call in the response."""
+    print("\nAuto function invocation filter")
+    print(f"Function: {context.function.name}")
+    print(f"Request sequence: {context.request_sequence_index}")
+    print(f"Function sequence: {context.function_sequence_index}")
+
+    # as an example
+    function_calls = context.chat_history.messages[-1].items
+    print(f"Number of function calls: {len(function_calls)}")
+    # if we don't call next, it will skip this function, and go to the next one
+    await next(context)
 
 
 class MenuPlugin:
@@ -34,8 +51,6 @@ USER_INPUTS = [
 
 
 async def main():
-    from service import kernel, chat_completion_service
-
     kernel.add_plugin(MenuPlugin(), plugin_name="menu")
     settings = kernel.get_prompt_execution_settings_from_service_id(
         service_id="default"
