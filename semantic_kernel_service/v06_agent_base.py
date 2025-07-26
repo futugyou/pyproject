@@ -1,6 +1,7 @@
 import asyncio
 
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
+from semantic_kernel.connectors.ai.completion_usage import CompletionUsage
 
 USER_INPUTS = [
     "Why is the sky blue?",
@@ -18,6 +19,7 @@ async def main():
         instructions="Answer questions about the world in one sentence.",
     )
     thread: ChatHistoryAgentThread = None
+    completion_usage = CompletionUsage()
     for user_input in USER_INPUTS:
         print(f"# User: {user_input}")
         # 2. Invoke the agent for a response
@@ -26,8 +28,14 @@ async def main():
             thread=thread,
         )
         thread = response.thread
+        if response.metadata.get("usage"):
+            completion_usage += response.metadata["usage"]
         # 3. Print the response
         print(f"# {response.name}: {response}")
+
+    print(
+        f"\nTotal Completion Usage: {completion_usage.model_dump_json(indent=4)}"
+    )
 
     await thread.delete() if thread else None
 
