@@ -1,13 +1,15 @@
 import logging
 import argparse
-from typing import Any, Literal
+from typing import Any, Literal, Annotated
 import os
 
 from semantic_kernel import Kernel
+from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.prompt_template.input_variable import InputVariable
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
+from mcp.server.lowlevel.server import Server
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,8 @@ with the following configuration:
             "env": {
                 "OPENAI_API_KEY": "<your_openai_api_key>",
                 "OPENAI_CHAT_MODEL_ID": "gpt-4o-mini",
-                "OPENAI_URL": "https://models.github.ai/inference"
+                "OPENAI_URL": "https://models.github.ai/inference",
+                "USEAGENT": "True"
             }
         }
     }
@@ -67,9 +70,25 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -> None:
-    kernel = Kernel()
+class MenuPlugin:
+    """A sample Menu Plugin used for the sample."""
 
+    @kernel_function(description="Provides a list of specials from the menu.")
+    def get_specials(self) -> Annotated[str, "Returns the specials from the menu."]:
+        return """
+        Special Soup: Clam Chowder
+        Special Salad: Cobb Salad
+        Special Drink: Chai Tea
+        """
+
+    @kernel_function(description="Provides the price of the requested menu item.")
+    def get_item_price(
+        self, menu_item: Annotated[str, "The name of the menu item."]
+    ) -> Annotated[str, "Returns the price of the menu item."]:
+        return "$9.99"
+
+
+def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -> None:
     @kernel_function()
     def echo_function(message: str, extra: str = "") -> str:
         """Echo a message as a function"""
@@ -77,6 +96,7 @@ def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -
 
     chat_completion_service = OpenAIChatCompletion(service_id="default")
     base_url = os.environ.get("OPENAI_URL")
+    use_agent = os.environ.get("USEAGENT")
     if base_url:
         chat_completion_service = OpenAIChatCompletion(
             ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID"),
@@ -86,33 +106,45 @@ def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -
                 base_url=os.getenv("OPENAI_URL"),
             ),
         )
-    kernel.add_service(chat_completion_service)
-    kernel.add_function("echo", echo_function, "echo_function")
-    kernel.add_function(
-        plugin_name="prompt",
-        function_name="prompt",
-        prompt_template_config=PromptTemplateConfig(
-            name="prompt",
-            description="This is a prompt",
-            template="Please repeat this: {{$message}} and this: {{$extra}}",
-            input_variables=[
-                InputVariable(
-                    name="message",
-                    description="This is the message.",
-                    is_required=True,
-                    json_schema='{ "type": "string", "description": "This is the message."}',
-                ),
-                InputVariable(
-                    name="extra",
-                    description="This is extra.",
-                    default="default",
-                    is_required=False,
-                    json_schema='{ "type": "string", "description": "This is the message."}',
-                ),
-            ],
-        ),
-    )
-    server = kernel.as_mcp_server(server_name="sk")
+
+    server: Server = None
+    if use_agent == "True":
+        agent = ChatCompletionAgent(
+            service=chat_completion_service,
+            name="Host",
+            instructions="Answer questions about the menu.",
+            plugins=[MenuPlugin()],
+        )
+        server = agent.as_mcp_server(server_name="sk")
+    else:
+        kernel = Kernel()
+        kernel.add_service(chat_completion_service)
+        kernel.add_function("echo", echo_function, "echo_function")
+        kernel.add_function(
+            plugin_name="prompt",
+            function_name="prompt",
+            prompt_template_config=PromptTemplateConfig(
+                name="prompt",
+                description="This is a prompt",
+                template="Please repeat this: {{$message}} and this: {{$extra}}",
+                input_variables=[
+                    InputVariable(
+                        name="message",
+                        description="This is the message.",
+                        is_required=True,
+                        json_schema='{ "type": "string", "description": "This is the message."}',
+                    ),
+                    InputVariable(
+                        name="extra",
+                        description="This is extra.",
+                        default="default",
+                        is_required=False,
+                        json_schema='{ "type": "string", "description": "This is the message."}',
+                    ),
+                ],
+            ),
+        )
+        server = kernel.as_mcp_server(server_name="sk")
 
     if transport == "sse" and port is not None:
         import uvicorn
