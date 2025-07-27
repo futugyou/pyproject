@@ -1,10 +1,13 @@
 from semantic_kernel import Kernel
 import asyncio
+import os
 from dataclasses import dataclass, field
 from typing import Annotated
 from uuid import uuid4
 from semantic_kernel.connectors.in_memory import InMemoryStore
+from semantic_kernel.connectors.mongodb import MongoDBAtlasStore
 from semantic_kernel.data.vector import (
+    VectorStore,
     VectorStoreField,
     vectorstoremodel,
     VectorSearchProtocol,
@@ -37,12 +40,27 @@ records = [
 
 
 async def init_embedding(kernel: Kernel) -> VectorSearchProtocol:
-    in_memory_store = InMemoryStore()
     embedding_gen = kernel.get_service(service_id="embedding")
+    use_mongo = os.environ.get("USE_MONGODB_EMBEDDING", "false")
+    vectorStore: VectorStore = None
+    if use_mongo == "true":
+        vectorStore = MongoDBAtlasStore(
+            connection_string=os.environ["MONGODB_CONNECTION_STRING"],
+            database_name=os.environ["MONGODB_DATABASE_NAME"],
+        )
+    else:
+        vectorStore = InMemoryStore()
 
-    collection = in_memory_store.get_collection(record_type=SimpleModel)
-    await collection.ensure_collection_exists()
-    collection.embedding_generator = embedding_gen
+    collection = vectorStore.get_collection(
+        record_type=SimpleModel,
+        collection_name="SimpleModel",
+        embedding_generator=embedding_gen,
+    )
+
+    exists: bool = await collection.collection_exists()
+    if not exists:
+        await collection.ensure_collection_exists()
+
     await collection.upsert(records)
     return collection
 
@@ -52,7 +70,7 @@ async def search_memory_examples(
 ) -> None:
     for question in questions:
         print(f"Question: {question}")
-        results = await collection.search(question, top=1)
+        results = await collection.search(question, top=1, numCandidates=1)
         async for result in results.results:
             print(f"Answer: {result.record.text}")
             print(f"Score: {result.score}\n")

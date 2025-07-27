@@ -33,9 +33,7 @@ async def main():
         # 3. Print the response
         print(f"# {response.name}: {response}")
 
-    print(
-        f"\nTotal Completion Usage: {completion_usage.model_dump_json(indent=4)}"
-    )
+    print(f"\nTotal Completion Usage: {completion_usage.model_dump_json(indent=4)}")
 
     await thread.delete() if thread else None
 
