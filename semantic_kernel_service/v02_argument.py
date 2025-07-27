@@ -1,6 +1,6 @@
 from semantic_kernel import Kernel
 from semantic_kernel.prompt_template import InputVariable, PromptTemplateConfig
-from semantic_kernel.contents import ChatHistory
+from semantic_kernel.contents import ChatHistory, ChatHistorySummarizationReducer
 from semantic_kernel.functions import KernelFunction, KernelArguments
 from openai import AsyncOpenAI
 import asyncio
@@ -38,7 +38,8 @@ async def chat(
         chat_function, KernelArguments(user_input=input_text, history=chat_history)
     )
     chat_history.add_user_message(input_text)
-    chat_history.add_assistant_message(str(answer))
+    await chat_history.add_message_async(answer.value[0])
+    # chat_history.add_assistant_message(str(answer))
 
 
 async def generate_arguments(
@@ -59,7 +60,12 @@ if __name__ == "__main__":
     async def main():
         from service import kernel
 
-        chat_history = ChatHistory()
+        chat_history = ChatHistorySummarizationReducer(
+            service=kernel.get_service("default"),
+            target_count=1,
+            threshold_count=0,
+            auto_reduce=True,
+        )
         chat_history.add_system_message(
             "You are a helpful chatbot who is good about giving book recommendations."
         )
@@ -73,5 +79,10 @@ if __name__ == "__main__":
             chat_history,
         )
         print(chat_history)
+
+        for msg in chat_history.messages:
+            if msg.metadata and msg.metadata.get("__summary__"):
+                print("Summary detected:", msg.content)
+                print("\n")
 
     asyncio.run(main())
