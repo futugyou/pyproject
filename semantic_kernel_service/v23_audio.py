@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 
-from audio_recorder import AudioRecorder
 
 from semantic_kernel.connectors.ai.open_ai import (
     OpenAIChatCompletion,
@@ -12,19 +11,6 @@ from semantic_kernel.connectors.ai.open_ai import (
     OpenAIChatPromptExecutionSettings,
 )
 from semantic_kernel.contents import AudioContent, ChatHistory
-
-# This simple sample demonstrates how to use the AzureChatCompletion and AzureAudioToText services
-# to create a chat bot that can communicate with the user using audio input.
-# The user can enage a long conversation with the chat bot by speaking to it.
-
-# Resources required for this sample:
-# 1. An Azure OpenAI model deployment (e.g. GPT-4o-mini).
-# 2. An Azure Speech to Text deployment (e.g. whisper).
-
-# Additional dependencies required for this sample:
-# - pyaudio: `pip install pyaudio` or `uv pip install pyaudio` if you are using uv and have a virtual env activated.
-# - keyboard: `pip install keyboard` or `uv pip install keyboard` if you are using uv and have a virtual env activated.
-
 
 logging.basicConfig(level=logging.WARNING)
 AUDIO_FILEPATH = os.path.join(os.path.dirname(__file__), "output.wav")
@@ -45,17 +31,15 @@ history.add_assistant_message(
 )
 
 
+# GitHub models do not have this feature, and Gemini needs use complete
 async def chat(
     chat_service: OpenAIChatCompletion, audio_to_text_service: OpenAIAudioToText
 ) -> bool:
     try:
-        print("User:> ", end="", flush=True)
-        with AudioRecorder(output_filepath=AUDIO_FILEPATH) as recorder:
-            recorder.start_recording()
-            user_input = await audio_to_text_service.get_text_content(
-                AudioContent.from_audio_file(AUDIO_FILEPATH)
-            )
-            print(user_input.text)
+        user_input = await audio_to_text_service.get_text_content(
+            AudioContent.from_audio_file(AUDIO_FILEPATH)
+        )
+        print(user_input.text)
     except KeyboardInterrupt:
         print("\n\nExiting chat...")
         return False
