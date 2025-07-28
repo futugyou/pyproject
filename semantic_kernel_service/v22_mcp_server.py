@@ -13,6 +13,7 @@ from semantic_kernel.prompt_template import (
     PromptTemplateConfig,
 )
 from mcp.server.lowlevel.server import Server
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +180,7 @@ def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -
         server = kernel.as_mcp_server(server_name="sk", prompts=[prompt])
 
     if transport == "sse" and port is not None:
+        import nest_asyncio
         import uvicorn
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
@@ -201,7 +203,7 @@ def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -
                 Mount("/messages/", app=sse.handle_post_message),
             ],
         )
-
+        nest_asyncio.apply()
         uvicorn.run(starlette_app, host="0.0.0.0", port=port)  # nosec
     elif transport == "stdio":
         import anyio
