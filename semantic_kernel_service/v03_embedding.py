@@ -11,18 +11,74 @@ from semantic_kernel.data.vector import (
     VectorStoreField,
     vectorstoremodel,
     VectorSearchProtocol,
+    VectorStoreCollection,
 )
+from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.prompt_template import PromptTemplateConfig
+
+
+@vectorstoremodel
+@dataclass
+class ChatHistoryModel:
+    session_id: Annotated[str, VectorStoreField("key")]
+    user_id: Annotated[str, VectorStoreField("data", is_indexed=True)]
+    messages: Annotated[list[dict[str, str]], VectorStoreField("data", is_indexed=True)]
+
+
+class ChatHistoryInVectorStore(ChatHistory):
+    session_id: str
+    user_id: str
+    store: VectorStore
+    collection: VectorStoreCollection[str, ChatHistoryModel] | None = None
+
+    async def create_collection(self, collection_name: str) -> None:
+        """Create a collection with the inbuild data model using the vector store.
+
+        First create the collection, then call this method to create the collection itself.
+        """
+        self.collection = self.store.get_collection(
+            collection_name=collection_name,
+            record_type=ChatHistoryModel,
+        )
+
+        exists: bool = await self.collection.collection_exists()
+        if not exists:
+            await self.collection.ensure_collection_exists()
+
+    async def store_messages(self) -> None:
+        """Store the chat history in the VectorStore.
+
+        Note that we use model_dump to convert the chat message content into a serializable format.
+        """
+        if self.collection:
+            await self.collection.upsert(
+                ChatHistoryModel(
+                    session_id=self.session_id,
+                    user_id=self.user_id,
+                    messages=[msg.model_dump() for msg in self.messages],
+                )
+            )
+
+    async def read_messages(self) -> None:
+        """Read the chat history from the VectorStore.
+
+        Note that we use the model_validate method to convert the serializable format back into a ChatMessageContent.
+        """
+        if self.collection:
+            record = await self.collection.get(self.session_id)
+            if record:
+                for message in record.messages:
+                    self.messages.append(ChatMessageContent.model_validate(message))
 
 
 @vectorstoremodel(collection_name="simple-model")
 @dataclass
 class SimpleModel:
-    text: Annotated[str, VectorStoreField("data", is_full_text_indexed=True)]
     id: Annotated[str, VectorStoreField("key")] = field(
         default_factory=lambda: str(uuid4())
     )
+    text: Annotated[str, VectorStoreField("data", is_full_text_indexed=True)]
     embedding: Annotated[
         list[float] | str | None, VectorStoreField("vector", dimensions=3072)
     ] = None
@@ -39,7 +95,9 @@ records = [
 ]
 
 
-async def init_embedding(kernel: Kernel) -> VectorSearchProtocol:
+async def init_embedding(
+    kernel: Kernel,
+) -> tuple[VectorSearchProtocol, ChatHistoryInVectorStore]:
     embedding_gen = kernel.get_service(service_id="embedding")
     use_mongo = os.environ.get("USE_MONGODB_EMBEDDING", "false")
     vectorStore: VectorStore = None
@@ -50,6 +108,11 @@ async def init_embedding(kernel: Kernel) -> VectorSearchProtocol:
         )
     else:
         vectorStore = InMemoryStore()
+
+    history = ChatHistoryInVectorStore(
+        store=vectorStore, session_id="session_id", user_id="user"
+    )
+    await history.create_collection(collection_name="chat_history")
 
     collection = vectorStore.get_collection(
         record_type=SimpleModel,
@@ -63,7 +126,7 @@ async def init_embedding(kernel: Kernel) -> VectorSearchProtocol:
         await collection.ensure_collection_exists()
 
     await collection.upsert(records)
-    return collection
+    return collection, history
 
 
 async def search_memory_examples(
@@ -126,10 +189,25 @@ async def setup_recall_function(
     return function
 
 
-async def chat(user_input: str, chat_func: KernelFunction, kernel: Kernel):
+async def chat(
+    user_input: str,
+    chat_func: KernelFunction,
+    kernel: Kernel,
+    history: ChatHistoryInVectorStore,
+):
+    await history.read_messages()
+    if len(history.messages) == 0:
+        history.add_system_message(
+            "You are a ChatBot can have a conversation with you about any topic."
+        )
+
     print(f"User: {user_input}")
+    history.add_user_message(user_input)
     answer = await kernel.invoke(chat_func, request=user_input)
     print(f"ChatBot:> {answer}")
+    if result:
+        history.add_message(answer)
+    await history.store_messages()
 
 
 if __name__ == "__main__":
@@ -137,7 +215,7 @@ if __name__ == "__main__":
     async def main():
         from service import kernel
 
-        collection = await init_embedding(kernel)
+        collection, history = await init_embedding(kernel)
         await search_memory_examples(
             kernel,
             collection,
@@ -150,6 +228,7 @@ if __name__ == "__main__":
 
         await setup_recall_function(kernel, collection)
         chat_func = await setup_chat_with_memory(kernel, "default")
-        await chat("What is my budget for 2024?", chat_func, kernel)
+        await chat("What is my budget for 2024?", chat_func, kernel, history)
+        await chat("What are my savings from 2023?", chat_func, kernel, history)
 
     asyncio.run(main())
