@@ -22,14 +22,14 @@ def parse_arguments():
     parser.add_argument(
         "--transport",
         type=str,
-        choices=["sse", "stdio"],
+        choices=["sse", "stdio", "http"],
         default="stdio",
         help="Transport method to use (default: stdio).",
     )
     return parser.parse_args()
 
 
-async def main(transport: Literal["sse", "stdio"] = "stdio"):
+async def main(transport: Literal["sse", "stdio", "http"] = "stdio"):
     from service import chat_completion_service
 
     mcp_agent: MCPPluginBase = None
@@ -50,9 +50,15 @@ async def main(transport: Literal["sse", "stdio"] = "stdio"):
                 "USEAGENT": "True",
             },
         )
-    else:
+    elif transport == "sse":
         mcp_agent = MCPSsePlugin(
-            url="http://0.0.0.0:8000/messages",
+            url="http://0.0.0.0:8000/sse",
+            name="Menu",
+            description="Menu plugin, for details about the menu, call this plugin.",
+        )
+    else:
+        mcp_agent = MCPStreamableHttpPlugin(
+            url="http://0.0.0.0:8000/mcp",
             name="Menu",
             description="Menu plugin, for details about the menu, call this plugin.",
         )

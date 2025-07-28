@@ -61,7 +61,7 @@ def parse_arguments():
     parser.add_argument(
         "--transport",
         type=str,
-        choices=["sse", "stdio"],
+        choices=["sse", "stdio", "http"],
         default="stdio",
         help="Transport method to use (default: stdio).",
     )
@@ -121,7 +121,9 @@ prompt = KernelPromptTemplate(
 )
 
 
-def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -> None:
+def run(
+    transport: Literal["sse", "stdio", "http"] = "stdio", port: int | None = None
+) -> None:
     @kernel_function()
     def echo_function(message: str, extra: str = "") -> str:
         """Echo a message as a function"""
@@ -218,6 +220,46 @@ def run(transport: Literal["sse", "stdio"] = "stdio", port: int | None = None) -
                 )
 
         anyio.run(handle_stdin)
+    else:
+        import contextlib
+        import nest_asyncio
+        import uvicorn
+        from collections.abc import AsyncIterator
+        from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+        from starlette.applications import Starlette
+        from starlette.routing import Mount
+        from starlette.types import Receive, Scope, Send
+
+        session_manager = StreamableHTTPSessionManager(
+            app=server,
+            json_response=True,
+        )
+
+        async def handle_streamable_http(
+            scope: Scope, receive: Receive, send: Send
+        ) -> None:
+            await session_manager.handle_request(scope, receive, send)
+
+        @contextlib.asynccontextmanager
+        async def lifespan(app: Starlette) -> AsyncIterator[None]:
+            """Context manager for managing session manager lifecycle."""
+            async with session_manager.run():
+                logger.info("Application started with StreamableHTTP session manager!")
+                try:
+                    yield
+                finally:
+                    logger.info("Application shutting down...")
+
+        starlette_app = Starlette(
+            debug=True,
+            routes=[
+                Mount("/mcp", app=handle_streamable_http),
+            ],
+            lifespan=lifespan,
+        )
+
+        nest_asyncio.apply()
+        uvicorn.run(starlette_app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
