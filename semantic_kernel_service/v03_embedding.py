@@ -24,7 +24,7 @@ class SimpleModel:
         default_factory=lambda: str(uuid4())
     )
     embedding: Annotated[
-        list[float] | str | None, VectorStoreField("vector", dimensions=1536)
+        list[float] | str | None, VectorStoreField("vector", dimensions=3072)
     ] = None
 
     def __post_init__(self):
@@ -53,9 +53,10 @@ async def init_embedding(kernel: Kernel) -> VectorSearchProtocol:
 
     collection = vectorStore.get_collection(
         record_type=SimpleModel,
-        collection_name="SimpleModel",
+        collection_name="simple-model",
         embedding_generator=embedding_gen,
     )
+    collection.index_name = "simple_model_index"
 
     exists: bool = await collection.collection_exists()
     if not exists:
@@ -70,7 +71,8 @@ async def search_memory_examples(
 ) -> None:
     for question in questions:
         print(f"Question: {question}")
-        results = await collection.search(question, top=1, numCandidates=1)
+        # https://github.com/microsoft/semantic-kernel/issues/12812
+        results = await collection.search(question, top=1)
         async for result in results.results:
             print(f"Answer: {result.record.text}")
             print(f"Score: {result.score}\n")
