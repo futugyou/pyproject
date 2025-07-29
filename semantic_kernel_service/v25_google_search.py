@@ -107,7 +107,9 @@ async def chat() -> bool:
         return False
 
     history.add_user_message(user_input)
-    result = await chat_completion_service.get_chat_message_content(history, settings, kernel=kernel)
+    result = await chat_completion_service.get_chat_message_content(
+        history, settings, kernel=kernel
+    )
     if result:
         print(f"Mosscap:> {result}")
         history.add_message(result)
