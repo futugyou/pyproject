@@ -1,9 +1,15 @@
 import logging
 from typing import Any, Annotated
 from pydantic import BaseModel, Field, AnyUrl
-
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import TextResource
+from mcp.types import (
+    Completion,
+    CompletionArgument,
+    CompletionContext,
+    PromptReference,
+    ResourceTemplateReference,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +60,10 @@ def create_resource_server() -> FastMCP:
         """Add two numbers"""
         return a + b
 
-    @app.resource("greeting://{name}")
-    def get_greeting(name: str) -> str:
+    @app.resource("greeting://{honorifics}/{name}")
+    def get_greeting(honorifics: str, name: str) -> str:
         """Get a personalized greeting"""
-        return f"Hello, {name}!"
+        return f"Hello, {honorifics} {name}!"
 
     @app.prompt()
     def greet_user(
@@ -74,6 +80,19 @@ def create_resource_server() -> FastMCP:
         }
 
         return f"{styles.get(style, styles['friendly'])} for someone named {name}."
+
+    @app.completion()
+    async def handle_completion(
+        ref: PromptReference | ResourceTemplateReference,
+        argument: CompletionArgument,
+        context: CompletionContext | None,
+    ) -> Completion | None:
+        if isinstance(ref, ResourceTemplateReference):
+            if ref.uri == "greeting://{honorifics}/{name}" and argument.name == "honorifics":
+                # if context and context.arguments and context.arguments.get("owner") == "modelcontextprotocol":
+                    repos = ["Mr.", "Miss", "Mrs.", "Ms."]
+                    return Completion(values=repos, hasMore=False)
+        return None
 
     text_resource = TextResource(
         uri=AnyUrl("resource://text"),

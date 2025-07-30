@@ -1,6 +1,7 @@
 import asyncio
 
 from mcp import ClientSession
+from mcp.types import PromptReference, ResourceTemplateReference
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
 
@@ -38,7 +39,17 @@ async def display_resources(session: ClientSession):
     templates_response = await session.list_resource_templates()
     for template in templates_response.resourceTemplates:
         display_name = get_display_name(template)
-        print(f"Resource Template: {display_name}\n")
+        print(f"Resource Template: {display_name}")
+        result = await session.complete(
+            ref=ResourceTemplateReference(
+                type="ref/resource", uri=template.uriTemplate
+            ),
+            argument={"name": "honorifics", "value": ""},
+            context_arguments={"owner": "modelcontextprotocol"}, 
+        )
+        print(
+            f"Completions for 'honorifics' with owner='modelcontextprotocol': {result.completion.values}\n"
+        )
 
 
 async def main():
