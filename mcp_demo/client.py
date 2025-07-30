@@ -18,6 +18,12 @@ async def display_prompts(session: ClientSession):
             for arg in prompt.arguments:
                 print(f"      {arg.name}: {arg.description}")
 
+        result = await session.complete(
+            ref=PromptReference(type="ref/prompt", name=prompt.name),
+            argument={"name": "style", "value": "f"},
+        )
+        print(f"Completions for 'style' argument: {result.completion.values}")
+
 
 async def display_tools(session: ClientSession):
     tools_response = await session.list_tools()
@@ -45,7 +51,7 @@ async def display_resources(session: ClientSession):
                 type="ref/resource", uri=template.uriTemplate
             ),
             argument={"name": "honorifics", "value": ""},
-            context_arguments={"owner": "modelcontextprotocol"}, 
+            context_arguments={"owner": "modelcontextprotocol"},
         )
         print(
             f"Completions for 'honorifics' with owner='modelcontextprotocol': {result.completion.values}\n"
