@@ -12,7 +12,7 @@ async def display_prompts(session: ClientSession):
         display_name = get_display_name(prompt)
         print(f"Prompt: {display_name}")
         if prompt.description:
-            print(f"   {prompt.description}\n")
+            print(f"   {prompt.description}")
         if prompt.arguments:
             for arg in prompt.arguments:
                 print(f"      {arg.name}: {arg.description}")
@@ -33,7 +33,7 @@ async def display_resources(session: ClientSession):
 
     for resource in resources_response.resources:
         display_name = get_display_name(resource)
-        print(f"Resource: {display_name} ({resource.uri})")
+        print(f"Resource: {display_name} ({resource.uri})\n")
 
     templates_response = await session.list_resource_templates()
     for template in templates_response.resourceTemplates:

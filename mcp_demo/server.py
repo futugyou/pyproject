@@ -1,8 +1,9 @@
 import logging
 from typing import Any, Annotated
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AnyUrl
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.resources import TextResource
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,30 @@ def create_resource_server() -> FastMCP:
     def get_greeting(name: str) -> str:
         """Get a personalized greeting"""
         return f"Hello, {name}!"
+
+    @app.prompt()
+    def greet_user(
+        name: Annotated[str, Field(description="The user's name")],
+        style: Annotated[
+            str, Field(default="friendly", description="The style of greeting")
+        ],
+    ) -> str:
+        """Generate a greeting prompt"""
+        styles = {
+            "friendly": "Please write a warm, friendly greeting",
+            "formal": "Please write a formal, professional greeting",
+            "casual": "Please write a casual, relaxed greeting",
+        }
+
+        return f"{styles.get(style, styles['friendly'])} for someone named {name}."
+
+    text_resource = TextResource(
+        uri=AnyUrl("resource://text"),
+        name="text_resource",
+        description="Basic resource",
+        text="you got a text",
+    )
+    app.add_resource(text_resource)
 
     return app
 
