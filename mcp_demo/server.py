@@ -1,6 +1,7 @@
 import logging
+import argparse
 import datetime
-from typing import Any, Annotated
+from typing import Any, Generic, Literal, Annotated
 from pydantic import BaseModel, Field, AnyUrl
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import TextResource
@@ -36,7 +37,7 @@ class UserInfo(BaseModel):
 def create_resource_server() -> FastMCP:
     app = FastMCP(
         name="MCP_DEMO",
-        port=8080,
+        # port=8080,
         debug=True,
     )
 
@@ -145,11 +146,14 @@ def create_resource_server() -> FastMCP:
     return app
 
 
-def main() -> int:
+def main(
+    transport: Literal["stdio", "streamable-http"] = "streamable-http",
+) -> int:
     try:
+        logger.info(f"transport: {transport}")
+        print(f"transport: {transport}")
         mcp_server = create_resource_server()
-
-        mcp_server.run(transport="streamable-http")
+        mcp_server.run(transport=transport)
         logger.info("Server stopped")
         return 0
     except Exception:
@@ -157,5 +161,19 @@ def main() -> int:
         return 1
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Run the MCP server.")
+    parser.add_argument(
+        "--transport",
+        type=str,
+        choices=["stdio", "streamable-http"],
+        default="streamable-http",
+        help="Transport method to use (default: streamable-http).",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    main()
+    print(f"Running {__file__} at {datetime.datetime.now()}")
+    args = parse_arguments()
+    main(transport=args.transport)
