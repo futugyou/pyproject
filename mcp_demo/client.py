@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import argparse
 import datetime
 from typing import Any, Generic, Literal, Annotated
@@ -9,6 +10,8 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
 from mcp.types import PromptReference, ResourceTemplateReference
+
+logger = logging.getLogger(__name__)
 
 
 class UserInfo(BaseModel):
@@ -85,36 +88,46 @@ async def display_resources(session: ClientSession):
         )
 
 
+async def run_session(session: ClientSession):
+    try:
+        await session.initialize()
+    except Exception as e:
+        logging.error("Session initialization failed: %s", e)
+        return
+
+    try:
+        await display_tools(session)
+        await display_resources(session)
+        await display_prompts(session)
+        await call_some_tools(session)
+    except Exception as e:
+        logging.error("Business logic execution failed: %s", e)
+
+
 async def main(transport: Literal["stdio", "streamable-http"] = "streamable-http"):
-    if transport == "stdio":
-        server_params = StdioServerParameters(
-            command="uv",
-            args=["run", "server.py", "--transport", "stdio"],
-        )
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-
-                await display_tools(session)
-                await display_resources(session)
-                await display_prompts(session)
-
-                await call_some_tools(session)
-
-    else:
-        async with streamablehttp_client("http://127.0.0.1:8080/mcp") as (
-            read_stream,
-            write_stream,
-            _,
-        ):
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-
-                await display_tools(session)
-                await display_resources(session)
-                await display_prompts(session)
-
-                await call_some_tools(session)
+    try:
+        if transport == "stdio":
+            server_params = StdioServerParameters(
+                command="uv",
+                args=["run", "server.py", "--transport", "stdio"],
+            )
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await run_session(session)
+        else:
+            async with streamablehttp_client("http://127.0.0.1:8080/mcp") as (
+                read_stream,
+                write_stream,
+                _,
+            ):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await run_session(session)
+    except FileNotFoundError as e:
+        logging.error("Failed to start client due to missing file or command: %s", e)
+    except ConnectionError as e:
+        logging.error("Connection failed: %s", e)
+    except Exception as e:
+        logging.error("Unexpected error occurred during client setup: %s", e)
 
 
 def parse_arguments():
