@@ -1,4 +1,7 @@
 import asyncio
+import datetime
+from typing import Any, Annotated
+from pydantic import BaseModel, Field, AnyUrl
 
 from mcp import ClientSession
 from mcp.types import PromptReference, ResourceTemplateReference
@@ -6,11 +9,27 @@ from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
 
 
+class UserInfo(BaseModel):
+    name: Annotated[str, Field(max_length=10)]
+    age: Annotated[int, Field(ge=0, le=120)]
+
 
 async def call_some_tools(session: ClientSession):
-    result = await session.call_tool("add", {"a": "123","b":"456"})
+    result = await session.call_tool("add", {"a": "123", "b": "456"})
     for value in result.content:
         print(f"Tool 'add' result: {value.text}")
+
+    result = await session.call_tool("get_time")
+    for value in result.content:
+        print(f"Tool 'get_time' result: {value.text}")
+
+    result = await session.call_tool(
+        "get_user_info", {"userFilter": {"name": "John", "age": "30"}}
+    )
+    for value in result.content:
+        user = UserInfo.model_validate_json(value.text)
+        print(f"Tool 'get_user_info' result: {user}")
+
 
 async def display_prompts(session: ClientSession):
     prompts = await session.list_prompts()

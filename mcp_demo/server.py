@@ -1,4 +1,5 @@
 import logging
+import datetime
 from typing import Any, Annotated
 from pydantic import BaseModel, Field, AnyUrl
 from mcp.server.fastmcp import FastMCP
@@ -20,6 +21,16 @@ class Shrimp(BaseModel):
 
 class ShrimpTank(BaseModel):
     shrimp: list[Shrimp]
+
+
+class UserRequest(BaseModel):
+    name: Annotated[str, Field(max_length=10)]
+    age: Annotated[int, Field(ge=0, le=120)]
+
+
+class UserInfo(BaseModel):
+    name: Annotated[str, Field(max_length=10)]
+    age: Annotated[int, Field(ge=0, le=120)]
 
 
 def create_resource_server() -> FastMCP:
@@ -46,6 +57,21 @@ def create_resource_server() -> FastMCP:
             "timestamp": now.timestamp(),
             "formatted": now.strftime("%Y-%m-%d %H:%M:%S"),
         }
+
+    @app.tool()
+    async def get_user_info(
+        userFilter: Annotated[UserRequest, Field(description="User sreach filter")],
+    ) -> list[UserInfo]:
+        """
+        get user info by name and age
+        """
+        print(f"name: {userFilter.name}, age: {userFilter.age}")
+        users: list[UserInfo] = [
+            UserInfo(name="Alice", age=30),
+            UserInfo(name="Bob", age=25),
+        ]
+
+        return users
 
     @app.tool()
     def name_shrimp(
