@@ -6,6 +6,12 @@ from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
 
 
+
+async def call_some_tools(session: ClientSession):
+    result = await session.call_tool("add", {"a": "123","b":"456"})
+    for value in result.content:
+        print(f"Tool 'add' result: {value.text}")
+
 async def display_prompts(session: ClientSession):
     prompts = await session.list_prompts()
 
@@ -22,7 +28,7 @@ async def display_prompts(session: ClientSession):
             ref=PromptReference(type="ref/prompt", name=prompt.name),
             argument={"name": "style", "value": "f"},
         )
-        print(f"Completions for 'style' argument: {result.completion.values}")
+        print(f"Completions for 'style' argument: {result.completion.values}\n")
 
 
 async def display_tools(session: ClientSession):
@@ -70,6 +76,8 @@ async def main():
             await display_tools(session)
             await display_resources(session)
             await display_prompts(session)
+
+            await call_some_tools(session)
 
 
 if __name__ == "__main__":
