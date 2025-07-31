@@ -19,14 +19,22 @@ class UserInfo(BaseModel):
     age: Annotated[int, Field(ge=0, le=120)]
 
 
+async def progress_callback(
+    progress: float, total: float | None, message: str | None
+) -> None:
+    print(f"Progress: {progress}, Total: {total}, Message: {message}")
+
+
 async def call_some_tools(session: ClientSession):
     result = await session.call_tool("add", {"a": "123", "b": "456"})
     for value in result.content:
         print(f"Tool 'add' result: {value.text}")
+    print("\n")
 
     result = await session.call_tool("get_time")
     for value in result.content:
         print(f"Tool 'get_time' result: {value.text}")
+    print("\n")
 
     result = await session.call_tool(
         "get_user_info", {"userFilter": {"name": "John", "age": "30"}}
@@ -34,12 +42,22 @@ async def call_some_tools(session: ClientSession):
     for value in result.content:
         user = UserInfo.model_validate_json(value.text)
         print(f"Tool 'get_user_info' result: {user}")
+    print("\n")
 
     result = await session.call_tool(
         "book_table", {"date": "2024-12-25", "time": "12-12-12"}
     )
     for value in result.content:
         print(f"Tool 'book_table' result: {value.text}")
+    print("\n")
+
+    result = await session.call_tool(
+        "process_data",
+        {"data": "hello, everyone"},
+        progress_callback=progress_callback,
+    )
+    for value in result.content:
+        print(f"Tool 'process_data' result: {value.text}")
 
 
 async def display_prompts(session: ClientSession):
