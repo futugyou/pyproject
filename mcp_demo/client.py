@@ -9,7 +9,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
-from mcp.types import PromptReference, ResourceTemplateReference
+from mcp.types import PromptReference, ResourceTemplateReference, ElicitResult
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,12 @@ async def call_some_tools(session: ClientSession):
     for value in result.content:
         user = UserInfo.model_validate_json(value.text)
         print(f"Tool 'get_user_info' result: {user}")
+
+    result = await session.call_tool(
+        "book_table", {"date": "2024-12-25", "time": "12-12-12"}
+    )
+    for value in result.content:
+        print(f"Tool 'book_table' result: {value.text}")
 
 
 async def display_prompts(session: ClientSession):
@@ -88,6 +94,16 @@ async def display_resources(session: ClientSession):
         )
 
 
+async def elicitation_callback(context, params):
+    if params.message.startswith("No tables available on"):
+        return ElicitResult(
+            action="accept",
+            content={"checkAlternative": "true", "alternativeDate": "2024-12-26"},
+        )
+    else:
+        raise ValueError(f"Unexpected elicitation message: {params.message}")
+
+
 async def run_session(session: ClientSession):
     try:
         await session.initialize()
@@ -112,7 +128,9 @@ async def main(transport: Literal["stdio", "streamable-http"] = "streamable-http
                 args=["run", "server.py", "--transport", "stdio"],
             )
             async with stdio_client(server_params) as (read, write):
-                async with ClientSession(read, write) as session:
+                async with ClientSession(
+                    read, write, elicitation_callback=elicitation_callback
+                ) as session:
                     await run_session(session)
         else:
             async with streamablehttp_client("http://127.0.0.1:8080/mcp") as (
@@ -120,14 +138,16 @@ async def main(transport: Literal["stdio", "streamable-http"] = "streamable-http
                 write_stream,
                 _,
             ):
-                async with ClientSession(read_stream, write_stream) as session:
+                async with ClientSession(
+                    read_stream, write_stream, elicitation_callback=elicitation_callback
+                ) as session:
                     await run_session(session)
     except FileNotFoundError as e:
         logging.error("Failed to start client due to missing file or command: %s", e)
     except ConnectionError as e:
         logging.error("Connection failed: %s", e)
-    except Exception as e:
-        logging.error("Unexpected error occurred during client setup: %s", e)
+    # except Exception as e:
+    #     logging.error("Unexpected error occurred during client setup: %s", e)
 
 
 def parse_arguments():

@@ -3,7 +3,7 @@ import argparse
 import datetime
 from typing import Any, Generic, Literal, Annotated
 from pydantic import BaseModel, Field, AnyUrl
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from mcp.types import (
     Completion,
@@ -34,10 +34,20 @@ class UserInfo(BaseModel):
     age: Annotated[int, Field(ge=0, le=120)]
 
 
+class BookingPreferences(BaseModel):
+    """Schema for collecting user preferences."""
+
+    checkAlternative: bool = Field(description="Would you like to check another date?")
+    alternativeDate: str = Field(
+        default="2024-12-26",
+        description="Alternative date (YYYY-MM-DD)",
+    )
+
+
 def create_resource_server() -> FastMCP:
     app = FastMCP(
         name="MCP_DEMO",
-        # port=8080,
+        port=8080,
         debug=True,
     )
 
@@ -86,6 +96,32 @@ def create_resource_server() -> FastMCP:
     def add(a: int, b: int) -> int:
         """Add two numbers"""
         return a + b
+
+    @app.tool()
+    async def book_table(
+        date: str,
+        time: str,
+        ctx: Context,
+    ) -> str:
+        """Book a table with date availability check."""
+        # Check if date is available
+        if date == "2024-12-25":
+            # Date unavailable - ask user for alternative
+            result = await ctx.elicit(
+                message=(
+                    f"No tables available on {date}. Would you like to try another date?"
+                ),
+                schema=BookingPreferences,
+            )
+
+            if result.action == "accept" and result.data:
+                if result.data.checkAlternative:
+                    return f"[SUCCESS] Booked for {result.data.alternativeDate}"
+                return "[CANCELLED] No booking made"
+            return "[CANCELLED] Booking cancelled"
+
+        # Date available
+        return f"[SUCCESS] Booked for {date} at {time}"
 
     @app.resource("greeting://{honorifics}/{name}")
     def get_greeting(honorifics: str, name: str) -> str:
