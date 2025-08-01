@@ -6,6 +6,11 @@ from pydantic import BaseModel, Field, AnyUrl
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.resources import TextResource
 from mcp.types import (
+    ClientCapabilities,
+    ElicitationCapability,
+    SamplingCapability,
+    TextContent,
+    SamplingMessage,
     Completion,
     CompletionArgument,
     CompletionContext,
@@ -105,19 +110,21 @@ def create_resource_server() -> FastMCP:
         """Book a table with date availability check."""
         # Check if date is available
         if date == "2024-12-25":
-            # Date unavailable - ask user for alternative
-            result = await ctx.elicit(
-                message=(
-                    f"No tables available on {date}. Would you like to try another date?"
-                ),
-                schema=BookingPreferences,
-            )
+            if ctx.session.check_client_capability(
+                ClientCapabilities(elicitation=ElicitationCapability())
+            ):
+                result = await ctx.elicit(
+                    message=(
+                        f"No tables available on {date}. Would you like to try another date?"
+                    ),
+                    schema=BookingPreferences,
+                )
 
-            if result.action == "accept" and result.data:
-                if result.data.checkAlternative:
-                    return f"[SUCCESS] Booked for {result.data.alternativeDate}"
-                return "[CANCELLED] No booking made"
-            return "[CANCELLED] Booking cancelled"
+                if result.action == "accept" and result.data:
+                    if result.data.checkAlternative:
+                        return f"[SUCCESS] Booked for {result.data.alternativeDate}"
+                    return "[CANCELLED] No booking made"
+                return "[CANCELLED] Booking cancelled"
 
         # Date available
         return f"[SUCCESS] Booked for {date} at {time}"
@@ -158,6 +165,27 @@ def create_resource_server() -> FastMCP:
         image.save(buffer, format="JPEG", quality=60, optimize=True)
 
         return Image(data=buffer.getvalue(), format="jpeg")
+
+    @app.tool()
+    async def generate_poem(topic: str, ctx: Context) -> str:
+        """Generate a poem using LLM sampling."""
+        prompt = f"Write a short poem about {topic}"
+
+        if ctx.session.check_client_capability(
+            ClientCapabilities(sampling=SamplingCapability())
+        ):
+            result = await ctx.session.create_message(
+                messages=[
+                    SamplingMessage(
+                        role="user",
+                        content=TextContent(type="text", text=prompt),
+                    )
+                ],
+                max_tokens=100,
+            )
+
+            return result.content.text
+        return prompt
 
     @app.resource("greeting://{honorifics}/{name}")
     def get_greeting(honorifics: str, name: str) -> str:
