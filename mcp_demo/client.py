@@ -7,14 +7,18 @@ from pydantic import BaseModel, Field, AnyUrl
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.shared.context import RequestContext
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
 from mcp.types import (
+    CreateMessageRequestParams,
     PromptReference,
     ResourceTemplateReference,
     ElicitResult,
     ImageContent,
     TextContent,
+    CreateMessageResult,
+    ErrorData,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,6 +76,12 @@ async def call_some_tools(session: ClientSession):
             print(f"Tool 'take_screenshot' ({value.mimeType}): {len(value.data)} bytes")
         if isinstance(value, TextContent):
             print(f"Tool 'take_screenshot': {value.text}")
+    print("\n")
+
+    result = await session.call_tool("generate_poem", {"topic": "rabbit"})
+    for value in result.content:
+        print(f"Tool 'generate_poem' result: {value.text}")
+    print("\n")
 
 
 async def display_prompts(session: ClientSession):
@@ -136,6 +146,20 @@ async def elicitation_callback(context, params):
         raise ValueError(f"Unexpected elicitation message: {params.message}")
 
 
+async def sampling_callback(
+    context: RequestContext["ClientSession", Any], params: CreateMessageRequestParams
+) -> CreateMessageResult | ErrorData:
+    for m in params.messages:
+        if m.role == "user":
+            return CreateMessageResult(
+                role="user",
+                model="",
+                content=TextContent(type="text", text="Sampled: " + m.content.text),
+            )
+
+    return ErrorData(code=500, message="no sampling data")
+
+
 async def run_session(session: ClientSession):
     try:
         await session.initialize()
@@ -161,7 +185,10 @@ async def main(transport: Literal["stdio", "streamable-http"] = "streamable-http
             )
             async with stdio_client(server_params) as (read, write):
                 async with ClientSession(
-                    read, write, elicitation_callback=elicitation_callback
+                    read,
+                    write,
+                    elicitation_callback=elicitation_callback,
+                    sampling_callback=sampling_callback,
                 ) as session:
                     await run_session(session)
         else:
@@ -171,7 +198,10 @@ async def main(transport: Literal["stdio", "streamable-http"] = "streamable-http
                 _,
             ):
                 async with ClientSession(
-                    read_stream, write_stream, elicitation_callback=elicitation_callback
+                    read_stream,
+                    write_stream,
+                    elicitation_callback=elicitation_callback,
+                    sampling_callback=sampling_callback,
                 ) as session:
                     await run_session(session)
     except FileNotFoundError as e:
