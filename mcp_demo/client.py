@@ -9,7 +9,13 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.metadata_utils import get_display_name
-from mcp.types import PromptReference, ResourceTemplateReference, ElicitResult
+from mcp.types import (
+    PromptReference,
+    ResourceTemplateReference,
+    ElicitResult,
+    ImageContent,
+    TextContent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +64,14 @@ async def call_some_tools(session: ClientSession):
     )
     for value in result.content:
         print(f"Tool 'process_data' result: {value.text}")
+    print("\n")
+
+    result = await session.call_tool("take_screenshot")
+    for value in result.content:
+        if isinstance(value, ImageContent):
+            print(f"Tool 'take_screenshot' ({value.mimeType}): {len(value.data)} bytes")
+        if isinstance(value, TextContent):
+            print(f"Tool 'take_screenshot': {value.text}")
 
 
 async def display_prompts(session: ClientSession):
