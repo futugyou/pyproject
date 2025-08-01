@@ -12,6 +12,7 @@ from mcp.types import (
     PromptReference,
     ResourceTemplateReference,
 )
+from mcp.server.fastmcp.utilities.types import Image
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +47,7 @@ class BookingPreferences(BaseModel):
 
 def create_resource_server() -> FastMCP:
     app = FastMCP(
-        name="MCP_DEMO",
-        port=8080,
-        debug=True,
+        name="MCP_DEMO", port=8080, debug=True, dependencies=["pyautogui", "Pillow"]
     )
 
     @app.tool()
@@ -142,6 +141,23 @@ def create_resource_server() -> FastMCP:
         await ctx.session.send_resource_list_changed()
 
         return f"Processed: {data}"
+
+    @app.tool()
+    def take_screenshot() -> Image:
+        """
+        Load a screenshot from a local file and return it as a compressed JPEG image.
+        Replace the file path with the actual screenshot you want to send.
+        """
+        from PIL import Image as PILImage
+        import io
+
+        file_path = "./17871902.png"
+        buffer = io.BytesIO()
+
+        image = PILImage.open(file_path).convert("RGB")
+        image.save(buffer, format="JPEG", quality=60, optimize=True)
+
+        return Image(data=buffer.getvalue(), format="jpeg")
 
     @app.resource("greeting://{honorifics}/{name}")
     def get_greeting(honorifics: str, name: str) -> str:
