@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class AuthOptions:
     auth_server_url: str

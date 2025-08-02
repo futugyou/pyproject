@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+
 @dataclass
 class TokenModel:
     _id: str
@@ -8,6 +9,7 @@ class TokenModel:
     token_type: str
     refresh_token: str
     expiry: datetime
+
 
 @dataclass
 class AuthModel:
