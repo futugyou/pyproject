@@ -1,7 +1,7 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from autogen_agentchat.agents import BaseChatAgent
+from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import UserMessage
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core.models import ModelFamily
@@ -24,12 +24,16 @@ async def run() -> None:
             "structured_output": True,
         },
     )
-
-    response = await model_client.create(
-        [UserMessage(content="What is the capital of France?", source="user")]
-    )
-    print(response)
+    
+    agent = AssistantAgent("assistant", model_client=model_client)
+    print(await agent.run(task="What is the capital of France?"))
     await model_client.close()
+    
+    # response = await model_client.create(
+    #     [UserMessage(content="What is the capital of France?", source="user")]
+    # )
+    # print(response)
+    # await model_client.close()
 
 
 if __name__ == "__main__":
