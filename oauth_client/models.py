@@ -1,22 +1,27 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Optional
 
 
-@dataclass
-class TokenModel:
-    _id: str
+class TokenModel(BaseModel):
+    id: str = Field(alias="_id")
     access_token: str
     token_type: str
-    refresh_token: str
+    refresh_token: Optional[str] = None
     expiry: datetime
 
+    def to_mongo(self):
+        return self.model_dump(by_alias=True)
 
-@dataclass
-class AuthModel:
-    _id: str
+
+class AuthModel(BaseModel):
+    id: str = Field(alias="_id")
     code_verifier: str
     code_challenge: str
     code_challenge_method: str
     state: str
     request_uri: str
     create_at: datetime
+
+    def to_mongo(self):
+        return self.model_dump(by_alias=True)

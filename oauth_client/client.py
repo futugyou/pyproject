@@ -43,7 +43,7 @@ class AuthClient:
             request_uri=request.full_path,
             create_at=datetime.utcnow(),
         )
-        self.db.oauth_request.insert_one(auth_model.__dict__)
+        self.db.oauth_request.insert_one(auth_model.to_mongo())
 
         return self.oauth.authorization_url(
             url=self.options.auth_server_url + self.options.auth_url,
@@ -57,7 +57,7 @@ class AuthClient:
         doc = self.db.oauth_request.find_one({"_id": state})
         if not doc:
             raise ValueError("State not found")
-        return AuthModel(**doc)
+        return AuthModel.model_validate(doc)
 
     def save_token(self, token: dict):
         model = TokenModel(
@@ -67,7 +67,7 @@ class AuthClient:
             refresh_token=token.get("refresh_token", ""),
             expiry=datetime.fromisoformat(token["expires_at"]),
         )
-        self.db.oauth_request.insert_one(model.__dict__)
+        self.db.oauth_request.insert_one(model.to_mongo())
 
     def exchange_token(self, code: str, state: str):
         auth_model = self.get_auth_request_info(state)
