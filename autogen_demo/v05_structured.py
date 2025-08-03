@@ -38,7 +38,7 @@ async def run() -> None:
         system_message="Categorize the input as happy, sad, or neutral following the JSON format.",
         # Define the output content type of the agent.
         output_content_type=AgentResponse,
-        model_client_stream=True, 
+        model_client_stream=True,
     )
 
     # async for message in agent.run_stream(task="I am happy."):  # type: ignore
