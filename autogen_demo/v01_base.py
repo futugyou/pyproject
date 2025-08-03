@@ -7,7 +7,6 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_core.models import ModelFamily
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-
 load_dotenv()
 
 
@@ -24,11 +23,11 @@ async def run() -> None:
             "structured_output": True,
         },
     )
-    
+
     agent = AssistantAgent("assistant", model_client=model_client)
     print(await agent.run(task="What is the capital of France?"))
     await model_client.close()
-    
+
     # response = await model_client.create(
     #     [UserMessage(content="What is the capital of France?", source="user")]
     # )
