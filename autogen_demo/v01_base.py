@@ -2,9 +2,7 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from autogen_agentchat.agents import AssistantAgent
-from autogen_core.models import UserMessage
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-from autogen_core.models import ModelFamily
+from autogen_core.models import UserMessage, ModelFamily
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 load_dotenv()
