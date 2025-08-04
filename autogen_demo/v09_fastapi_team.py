@@ -6,7 +6,8 @@ import aiofiles
 import orjson
 import yaml
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
-from autogen_agentchat.base import TaskResult
+from autogen_agentchat.base import TaskResult, Handoff
+from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination
 from autogen_agentchat.messages import TextMessage, UserInputRequestedEvent
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_core import CancellationToken
@@ -82,8 +83,19 @@ async def get_team(
         name="user",
         input_func=user_input_func,  # Use the user input function.
     )
+    # Create a lazy assistant agent that always hands off to the user.
+    lazy_agent = AssistantAgent(
+        "lazy_assistant",
+        model_client=model_client,
+        handoffs=[Handoff(target="user", message="Transfer to user.")],
+        system_message="If you cannot complete the task, transfer to user. Otherwise, when finished, respond with 'TERMINATE'.",
+    )
+    text_termination = TextMentionTermination("TERMINATE")
+    handoff_termination = HandoffTermination(target="user")
+
     team = RoundRobinGroupChat(
-        [agent, yoda, user_proxy],
+        [agent, yoda, user_proxy, lazy_agent],
+        termination_condition=handoff_termination | text_termination,
     )
     # Load state from file.
     if not os.path.exists(state_path):
@@ -136,11 +148,11 @@ async def chat(websocket: WebSocket):
 
     try:
         while True:
-            try:
-                # Get user message.
-                data = await receive_orjson(websocket)
-                request = TextMessage.model_validate(data)
+            # Get user message.
+            data = await receive_orjson(websocket)
+            request = TextMessage.model_validate(data)
 
+            try:
                 # Get the team and respond to the message.
                 team = await get_team(_user_input)
                 history = await get_history()
@@ -153,7 +165,11 @@ async def chat(websocket: WebSocket):
                     if not isinstance(message, UserInputRequestedEvent):
                         # Don't save user input events to history.
                         history.append(msg)
+
+                # The program execution does not reach here, it seems that stream has not finished.
+                # After adding the `termination_condition`, the program can now execute up to this point.
                 print("stream end")
+
                 # Save team state to file.
                 async with aiofiles.open(state_path, "wb") as file:
                     state = await team.save_state()
