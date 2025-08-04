@@ -3,6 +3,7 @@ import os
 from typing import Any
 
 import aiofiles
+import orjson
 import yaml
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
@@ -70,13 +71,16 @@ async def get_agent() -> AssistantAgent:
     await agent.load_state(state)
     return agent
 
-
 async def get_history() -> list[dict[str, Any]]:
     """Get chat history from file."""
     if not os.path.exists(history_path):
         return []
-    async with aiofiles.open(history_path, "r") as file:
-        return json.loads(await file.read())
+    async with aiofiles.open(history_path, "rb") as file: 
+        content = await file.read()
+        if not content.strip():
+            return []
+        return orjson.loads(content)
+
 
 
 @app.get("/history")
@@ -105,9 +109,9 @@ async def chat(request: TextMessage) -> TextMessage:
         history = await get_history()
         history.append(request.model_dump())
         history.append(response.chat_message.model_dump())
-        async with aiofiles.open(history_path, "w") as file:
-            await file.write(json.dumps(history))
-            print(history)
+        async with aiofiles.open(history_path, "wb") as file:
+            await file.write(orjson.dumps(history))
+
 
         assert isinstance(response.chat_message, TextMessage)
         return response.chat_message
