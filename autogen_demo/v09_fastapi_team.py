@@ -1,4 +1,3 @@
-
 import logging
 import os
 from typing import Any, Awaitable, Callable, Optional
@@ -18,6 +17,9 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+from websocket_json import send_orjson, receive_orjson
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,16 +48,16 @@ app.mount("/static", StaticFiles(directory="."), name="static")
 @app.get("/")
 async def root():
     """Serve the chat interface HTML file."""
-    return FileResponse("v09_human_client.html")
+    return FileResponse("v09_fastapi_team.html")
 
 
 async def get_team(
     user_input_func: Callable[[str, Optional[CancellationToken]], Awaitable[str]],
 ) -> RoundRobinGroupChat:
     model_client = OpenAIChatCompletionClient(
-        model=os.getenv("OPENAI_CHAT_MODEL_ID"),
-        base_url=os.getenv("OPENAI_URL"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        model=os.getenv("GOOGLE_CHAT_MODEL_ID"),
+        base_url=os.getenv("GOOGLE_URL"),
+        api_key=os.getenv("GOOGLE_API_KEY"),
         # parallel_tool_calls=False,
         model_info={
             "vision": True,
@@ -123,7 +125,8 @@ async def chat(websocket: WebSocket):
         prompt: str, cancellation_token: CancellationToken | None
     ) -> str:
         try:
-            data = await websocket.receive_json()
+            data = await receive_orjson(websocket)
+            print("receive  JSON: %s" % data)
             message = TextMessage.model_validate(data)
             return message.content
         except WebSocketDisconnect:
@@ -133,11 +136,11 @@ async def chat(websocket: WebSocket):
 
     try:
         while True:
-            # Get user message.
-            data = await websocket.receive_json()
-            request = TextMessage.model_validate(data)
-
             try:
+                # Get user message.
+                data = await receive_orjson(websocket)
+                request = TextMessage.model_validate(data)
+
                 # Get the team and respond to the message.
                 team = await get_team(_user_input)
                 history = await get_history()
@@ -146,11 +149,11 @@ async def chat(websocket: WebSocket):
                     if isinstance(message, TaskResult):
                         continue
                     msg = message.model_dump()
-                    await websocket.send_json(msg)
+                    await send_orjson(websocket, msg)
                     if not isinstance(message, UserInputRequestedEvent):
                         # Don't save user input events to history.
-                        history.append(message.model_dump())
-
+                        history.append(msg)
+                print("stream end")
                 # Save team state to file.
                 async with aiofiles.open(state_path, "wb") as file:
                     state = await team.save_state()
@@ -158,6 +161,7 @@ async def chat(websocket: WebSocket):
 
                 # Save chat history to file.
                 async with aiofiles.open(history_path, "wb") as file:
+                    print(1, history)
                     await file.write(orjson.dumps(history))
 
             except WebSocketDisconnect:
@@ -172,14 +176,15 @@ async def chat(websocket: WebSocket):
                     "source": "system",
                 }
                 try:
-                    await websocket.send_json(error_message)
+                    await send_orjson(websocket, error_message)
                     # Re-enable input after error
-                    await websocket.send_json(
+                    await send_orjson(
+                        websocket,
                         {
                             "type": "UserInputRequestedEvent",
                             "content": "An error occurred. Please try again.",
                             "source": "system",
-                        }
+                        },
                     )
                 except WebSocketDisconnect:
                     # Client disconnected while sending error - exit gracefully
@@ -194,12 +199,13 @@ async def chat(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         try:
-            await websocket.send_json(
+            await send_orjson(
+                websocket,
                 {
                     "type": "error",
                     "content": f"Unexpected error: {str(e)}",
                     "source": "system",
-                }
+                },
             )
         except WebSocketDisconnect:
             # Client already disconnected - no need to send

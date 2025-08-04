@@ -111,35 +111,63 @@
     </div>
 
     <script>
-        const ws = new WebSocket('wss://sqriva-cmwsvt-8002.app.cloudstudio.work/ws/chat');
+        let ws;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 10;
 
-        ws.onmessage = function (event) {
-            const message = JSON.parse(event.data);
+        function connectWebSocket() {
+            ws = new WebSocket('wss://sqriva-cmwsvt-8002.app.cloudstudio.work/ws/chat');
+            ws.binaryType = "blob";
 
-            if (message.type === 'UserInputRequestedEvent') {
-                // Re-enable input and send button if UserInputRequestedEvent is received
+
+            ws.onopen = function () {
+                reconnectAttempts = 0;
+                displayMessage("✅ Connected to server.", "system");
                 enableInput();
-            }
-            else if (message.type === 'error') {
-                // Display error message
-                displayMessage(message.content, 'error');
-                enableInput();
-            }
-            else {
-                // Display regular message
-                displayMessage(message.content, message.source);
-            }
-        };
+            };
 
-        ws.onerror = function (error) {
-            displayMessage("WebSocket error occurred. Please refresh the page.", 'error');
-            enableInput();
-        };
+            ws.onmessage = async function (event) {
+                try {
+                    const buffer = await event.data.arrayBuffer(); // Blob -> ArrayBuffer
+                    const text = new TextDecoder('utf-8').decode(buffer); // Decode bytes to string
+                    const message = JSON.parse(text); // Parse JSON
 
-        ws.onclose = function () {
-            displayMessage("Connection closed. Please refresh the page.", 'system');
-            disableInput();
-        };
+                    if (message.type === 'UserInputRequestedEvent') {
+                        enableInput();
+                    } else if (message.type === 'error') {
+                        displayMessage(message.content, 'error');
+                        enableInput();
+                    } else {
+                        displayMessage(message.content, message.source);
+                    }
+                } catch (err) {
+                    console.error("Failed to parse message:", err);
+                    displayMessage("⚠️ Failed to parse message from server.", 'error');
+                }
+            };
+
+            ws.onerror = function () {
+                displayMessage("❌ WebSocket error. Trying to reconnect...", 'error');
+                tryReconnect();
+            };
+
+            ws.onclose = function () {
+                displayMessage("🔌 Connection closed. Trying to reconnect...", 'system');
+                disableInput();
+                tryReconnect();
+            };
+        }
+
+        function tryReconnect() {
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 2000); // wait 2s and reconnect
+            } else {
+                displayMessage("❌ Could not reconnect after multiple attempts.", "error");
+            }
+        }
+
+        connectWebSocket();
 
         document.getElementById('message-input').addEventListener('keydown', function (event) {
             if (event.key === 'Enter' && !event.target.disabled) {
