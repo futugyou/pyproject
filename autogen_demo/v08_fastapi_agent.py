@@ -66,21 +66,21 @@ async def get_agent() -> AssistantAgent:
     # Load state from file.
     if not os.path.exists(state_path):
         return agent  # Return agent without loading state.
-    async with aiofiles.open(state_path, "r") as file:
-        state = json.loads(await file.read())
+    async with aiofiles.open(state_path, "rb") as file:
+        state = orjson.loads(await file.read())
     await agent.load_state(state)
     return agent
+
 
 async def get_history() -> list[dict[str, Any]]:
     """Get chat history from file."""
     if not os.path.exists(history_path):
         return []
-    async with aiofiles.open(history_path, "rb") as file: 
+    async with aiofiles.open(history_path, "rb") as file:
         content = await file.read()
         if not content.strip():
             return []
         return orjson.loads(content)
-
 
 
 @app.get("/history")
@@ -102,8 +102,8 @@ async def chat(request: TextMessage) -> TextMessage:
 
         # Save agent state to file.
         state = await agent.save_state()
-        async with aiofiles.open(state_path, "w") as file:
-            await file.write(json.dumps(state))
+        async with aiofiles.open(state_path, "wb") as file:
+            await file.write(orjson.dumps(state))
 
         # Save chat history to file.
         history = await get_history()
@@ -111,7 +111,6 @@ async def chat(request: TextMessage) -> TextMessage:
         history.append(response.chat_message.model_dump())
         async with aiofiles.open(history_path, "wb") as file:
             await file.write(orjson.dumps(history))
-
 
         assert isinstance(response.chat_message, TextMessage)
         return response.chat_message
