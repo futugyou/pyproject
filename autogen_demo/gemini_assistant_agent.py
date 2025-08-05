@@ -3,7 +3,7 @@ from typing import AsyncGenerator, Sequence
 
 from autogen_agentchat.agents import BaseChatAgent
 from autogen_agentchat.base import Response
-from autogen_agentchat.messages import BaseAgentEvent, BaseChatMessage
+from autogen_agentchat.messages import BaseAgentEvent, BaseChatMessage, TextMessage
 from autogen_core import CancellationToken, Component
 from autogen_core.model_context import UnboundedChatCompletionContext
 from autogen_core.models import AssistantMessage, RequestUsage, UserMessage
@@ -16,7 +16,7 @@ from typing_extensions import Self
 class GeminiAssistantAgentConfig(BaseModel):
     name: str
     description: str = "An agent that provides assistance with ability to use tools."
-    model: str = "gemini-1.5-flash-002"
+    model: str = ("gemini-2.5-pro",)
     system_message: str | None = None
 
 
@@ -28,7 +28,7 @@ class GeminiAssistantAgent(BaseChatAgent, Component[GeminiAssistantAgentConfig])
         name: str,
         description: str = "An agent that provides assistance with ability to use tools.",
         model: str = "gemini-2.5-pro",
-        api_key: str = os.environ["GOOGLE_API_KEY"],
+        api_key: str = os.getenv("GOOGLE_API_KEY"),
         system_message: str
         | None = "You are a helpful assistant that can respond to messages. Reply with TERMINATE when the task has been completed.",
     ):
