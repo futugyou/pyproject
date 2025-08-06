@@ -36,11 +36,15 @@ async def run() -> None:
 
     # Create two editor agents
     editor1 = AssistantAgent(
-        "editor1", model_client=model_client, system_message="Edit the paragraph for grammar."
+        "editor1",
+        model_client=model_client,
+        system_message="Edit the paragraph for grammar.",
     )
 
     editor2 = AssistantAgent(
-        "editor2", model_client=model_client, system_message="Edit the paragraph for style."
+        "editor2",
+        model_client=model_client,
+        system_message="Edit the paragraph for style.",
     )
 
     # Create the final reviewer agent
