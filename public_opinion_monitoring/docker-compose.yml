@@ -1,0 +1,14 @@
+version: '3.5'
+
+services:
+  milvus-standalone:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.3.0
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - /tmp/milvus/data:/var/lib/milvus
+    environment:
+      ETCD_USE_EMBEDDED: "true"
+      MINIO_USE_EMBEDDED: "true"
