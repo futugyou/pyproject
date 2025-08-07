@@ -4,15 +4,89 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
 from autogen_agentchat.ui import Console
-from autogen_core.memory import MemoryContent, MemoryMimeType
+from autogen_core.memory import Memory, MemoryContent, MemoryMimeType
 from autogen_ext.memory.mem0 import Mem0Memory
 
 import asyncio
 import os
 from dotenv import load_dotenv
 from typing import Any, Dict, List
+import aiofiles
+import aiohttp
 
 load_dotenv()
+
+
+class SimpleDocumentIndexer:
+    """Basic document indexer for AutoGen Memory."""
+
+    def __init__(self, memory: Memory, chunk_size: int = 1500) -> None:
+        self.memory = memory
+        self.chunk_size = chunk_size
+
+    async def _fetch_content(self, source: str) -> str:
+        """Fetch content from URL or file."""
+        if source.startswith(("http://", "https://")):
+            async with aiohttp.ClientSession() as session:
+                async with session.get(source) as response:
+                    return await response.text()
+        else:
+            async with aiofiles.open(source, "r", encoding="utf-8") as f:
+                return await f.read()
+
+    def _strip_html(self, text: str) -> str:
+        """Remove HTML tags and normalize whitespace."""
+        text = re.sub(r"<[^>]*>", " ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    def _split_text(self, text: str) -> List[str]:
+        """Split text into fixed-size chunks."""
+        chunks: list[str] = []
+        # Just split text into fixed-size chunks
+        for i in range(0, len(text), self.chunk_size):
+            chunk = text[i : i + self.chunk_size]
+            chunks.append(chunk.strip())
+        return chunks
+
+    async def index_documents(self, sources: List[str]) -> int:
+        """Index documents into memory."""
+        total_chunks = 0
+
+        for source in sources:
+            try:
+                content = await self._fetch_content(source)
+
+                # Strip HTML if content appears to be HTML
+                if "<" in content and ">" in content:
+                    content = self._strip_html(content)
+
+                chunks = self._split_text(content)
+
+                for i, chunk in enumerate(chunks):
+                    await self.memory.add(
+                        MemoryContent(
+                            content=chunk,
+                            mime_type=MemoryMimeType.TEXT,
+                            metadata={"source": source, "chunk_index": i},
+                        )
+                    )
+
+                total_chunks += len(chunks)
+
+            except Exception as e:
+                print(f"Error indexing {source}: {str(e)}")
+
+        return total_chunks
+
+
+async def index_autogen_docs(rag_memory: Mem0Memory) -> None:
+    indexer = SimpleDocumentIndexer(memory=rag_memory)
+    sources = [
+        "https://raw.githubusercontent.com/microsoft/autogen/main/README.md",
+    ]
+    chunks: int = await indexer.index_documents(sources)
+    print(f"Indexed {chunks} chunks from {len(sources)} AutoGen documents")
 
 
 async def get_weather(city: str, units: str = "imperial") -> str:
@@ -45,6 +119,8 @@ async def run() -> None:
         limit=5,  # Maximum number of memories to retrieve
     )
 
+    await index_autogen_docs(mem0_memory)
+
     # Add user preferences to memory
     await mem0_memory.add(
         MemoryContent(
@@ -71,7 +147,8 @@ async def run() -> None:
     )
 
     # Ask about the weather
-    stream = assistant_agent.run_stream(task="What are my dietary preferences?")
+    # stream = assistant_agent.run_stream(task="What are my dietary preferences?")
+    stream = assistant_agent.run_stream(task="What is AgentChat?")
     await Console(stream)
     await model_client.close()
 

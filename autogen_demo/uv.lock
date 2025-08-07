@@ -260,6 +260,8 @@ name = "autogen-demo"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "aiofiles" },
+    { name = "aiohttp" },
     { name = "autogen-agentchat" },
     { name = "autogen-ext", extra = ["chromadb", "magentic-one", "mcp", "mem0", "openai", "semantic-kernel-core"] },
     { name = "fastapi" },
@@ -271,6 +273,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiofiles", specifier = ">=24.1.0" },
+    { name = "aiohttp", specifier = ">=3.12.15" },
     { name = "autogen-agentchat", specifier = ">=0.7.1" },
     { name = "autogen-ext", extras = ["chromadb", "magentic-one", "mcp", "mem0", "openai", "semantic-kernel-core"], specifier = ">=0.7.1" },
     { name = "fastapi", specifier = ">=0.116.1" },
