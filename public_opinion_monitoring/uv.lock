@@ -250,6 +250,7 @@ dependencies = [
     { name = "dotenv" },
     { name = "jieba" },
     { name = "openai" },
+    { name = "pydantic" },
     { name = "requests" },
     { name = "tqdm" },
 ]
@@ -259,6 +260,7 @@ requires-dist = [
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "jieba", specifier = ">=0.42.1" },
     { name = "openai", specifier = ">=1.99.1" },
+    { name = "pydantic", specifier = ">=2.11.7" },
     { name = "requests", specifier = ">=2.32.4" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
