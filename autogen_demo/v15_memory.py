@@ -61,6 +61,7 @@ async def run() -> None:
     # Run the agent with a task.
     stream = assistant_agent.run_stream(task="What is the weather in New York?")
     await Console(stream)
+    await model_client.close()
 
 
 if __name__ == "__main__":
