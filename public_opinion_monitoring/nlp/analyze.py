@@ -8,18 +8,22 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def analyze_text_with_llm(text_content):
+async def analyze_text_with_llm(text_content, tags_content):
     """
     Call the LLM API to analyze the text and return structured JSON results.
     """
 
-    system_prompt = """你是一个专业的食品安全舆情分析专家，精通自然语言处理技术。你的任务是分析用户提供的文本，从中提取食品安全事件相关信息，并进行情感分析。请严格按照要求，以JSON格式输出结果。"""
+    system_prompt = """你是一个专业的食品安全舆情分析专家，精通自然语言处理技术。你的任务是分析用户提供的文本，从中提取食品安全事件相关信息，识别广告并进行情感分析。请严格按照要求，以JSON格式输出结果。"""
 
-    user_prompt_template = """请分析以下文本，并提取食品安全事件三元组（主体-谓词-客体）、情感分析结果。请确保输出的JSON格式完全正确，并且内容准确无误。如果文本中没有相关信息，请返回空列表或null。
+    user_prompt_template = """请分析以下文本，并提取食品安全事件三元组（主体-谓词-客体）、情感分析结果以及是否为广告内容。请特别注意，我已经为您提取了文本中可能涉及的关键实体（如企业名、有害物质等），您应将这些信息作为辅助，来更精准地完成分析任务。请严格按照要求，以JSON格式输出结果。如果文本中没有相关信息，请返回空列表或null。
 
 --- 待分析文本 ---
 
 {text_content}
+
+--- 辅助信息 (已识别的实体) ---
+
+{tags_content}
 
 --- 输出要求 ---
 
@@ -37,6 +41,12 @@ async def analyze_text_with_llm(text_content):
     * **`sentiment_keywords`：** 列表，列出所有影响情感判断的关键词（如“剧毒”、“触目惊心”、“没有”、“最好”等）。
     * **`analysis_details`：** 字符串，简要分析情感产生的原因，包括识别到的情感词、否定词、程度副词以及它们对情感倾向的影响。
 
+3.  **广告识别（ad_detection）：**
+    * `is_ad`：是否为广告（true/false）
+    * `ad_type`：类型，如“电商广告”、“公众号推广”、“品牌宣传”、“引流话术”，如不是广告，则为 null
+    * `ad_keywords`：涉及广告的关键词列表（如“扫码”、“加vx”、“买一送一”），如无为 null
+    * `reasoning`：为何判断为广告或非广告的理由
+
 **重要提示：**
 * 请将所有输出数据严格封装在单个JSON对象中，键为`analysis_result`。
 * 如果文本不包含任何相关事件或情感，可以返回一个表示为空的JSON对象，例如：`{{"analysis_result": null}}`。
@@ -44,6 +54,11 @@ async def analyze_text_with_llm(text_content):
 --- 示例 ---
 
 输入文本: \"朋友拿了米其林一星餐厅的燕皮扁食去化验 检测出了硼砂成分（剧毒）想提醒妈妈们馄饨、肠粉之类的自己做我也好信儿 也寄了我们家小馄饨去检测花了 750 块钱巨资 还好没有……不过食品安全也算是触目惊心了自己做肯定是最好的 \"
+
+辅助信息 (已识别的实体):
+企业名: ['米其林一星餐厅']
+有害物质: ['硼砂']
+食品名: ['馄饨', '肠粉']
 
 期望输出JSON：
 ```json
@@ -75,7 +90,13 @@ async def analyze_text_with_llm(text_content):
         "还好没有",
         "最好"
        ],
-    "analysis_details": "文本整体情感偏向负面。负面情感主要来源于对'米其林一星餐厅'的'燕皮扁食'中'剧毒'的'硼砂成分'的震惊，以及对'食品安全'感到'触目惊心'。正面情感部分来源于作者检测自家馄饨'还好没有'问题，并强调'自己做肯定是最好的'，体现了对安全食物的正面期望。"
+      "analysis_details": "文本整体情感偏向负面。负面情感主要来源于对'米其林一星餐厅'的'燕皮扁食'中'剧毒'的'硼砂成分'的震惊，以及对'食品安全'感到'触目惊心'。正面情感部分来源于作者检测自家馄饨'还好没有'问题，并强调'自己做肯定是最好的'，体现了对安全食物的正面期望。"
+    }},
+    "ad_detection": {{
+        "is_ad": false,
+        "ad_type": null,
+        "ad_keywords": null,
+        "reasoning": "通过关键词和情感分析，判断这段文本没有广告的迹象。"
     }}
   }}
 }}
@@ -88,7 +109,9 @@ async def analyze_text_with_llm(text_content):
         {"role": "system", "content": system_prompt},
         {
             "role": "user",
-            "content": user_prompt_template.format(text_content=text_content),
+            "content": user_prompt_template.format(
+                text_content=text_content, tags_content=tags_content
+            ),
         },
     ]
 
@@ -127,10 +150,17 @@ async def process_jsonl_file(input_file, output_file):
             for line in tqdm(lines, total=total_lines, desc="Processing JSONL"):
                 data = json.loads(line)
                 text = data.get("text", "")
+                tags = data.get("tags", {})
+                tags_content_lines = []
+
+                for k, v in tags.items():
+                    tags_content_lines.append(f"{k}: {list(v.keys())}")
+
+                tags_content = "\n".join(tags_content_lines)
 
                 if text:
                     # Call LLM for analysis
-                    analysis_result = await analyze_text_with_llm(text)
+                    analysis_result = await analyze_text_with_llm(text, tags_content)
 
                     # Merge the analysis results into the original data
                     if analysis_result:
@@ -141,6 +171,7 @@ async def process_jsonl_file(input_file, output_file):
                             "analysis_result": {
                                 "event_triples": [],
                                 "sentiment_analysis": None,
+                                "ad_detection": None,
                             }
                         }
                     )
