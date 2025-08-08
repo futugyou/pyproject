@@ -23,6 +23,7 @@ from pytz import timezone
 load_dotenv()
 
 
+# llm use `American Airlines Q3 2023 financial report`, i dotnot know why search `Q3 2023`
 def google_search(query: str, num_results: int = 2, max_chars: int = 500) -> list:  # type: ignore[type-arg]
     api_key = os.getenv("GOOGLE_SEARCH_API_KEY")
     search_engine_id = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
