@@ -1,8 +1,9 @@
 import json
 import jieba
+import jieba.posseg as pseg
 
 # import hanlp
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from collections import defaultdict, Counter
 
 
@@ -15,7 +16,7 @@ class CustomSegmenter:
 
         if engine == "jieba":
             self.init_jieba()
-        # elif engine == 'hanlp':
+        # elif engine == "hanlp":
         #     self.init_hanlp()
         else:
             raise ValueError("engine must be 'jieba' or 'hanlp'")
@@ -39,17 +40,32 @@ class CustomSegmenter:
             jieba.add_word(w)
 
     # def init_hanlp(self):
-    #     self.tokenizer = hanlp.load('PKU_NAME_MERGED_SIX_MONTHS_CONVSEG')
+    #     # hanlp.load() now returns a pipeline.
+    #     # This is a general approach to load a model for segmentation and POS tagging.
+    #     self.pipeline = hanlp.load(
+    #         hanlp.pretrained.mtl.CLOSE_TOK_POS_NER_SRL_DEP_SDP_CON_ELECTRA_BASE
+    #     )
+    #     # Add custom dictionary
     #     for w in self.domain_dict.keys():
-    #         self.tokenizer.add_dictionary(w)
+    #         self.pipeline["cws"].add_dictionary(
+    #             w, "ns"
+    #         )  # The second parameter is part of speech.
 
     def segment(self, text: str) -> List[str]:
         if self.engine == "jieba":
             return list(jieba.cut(text))
-        elif self.engine == "hanlp":
-            return self.tokenizer(text)
+        # elif self.engine == "hanlp":
+        #     return self.pipeline(text)["tok/fine"]
         else:
             return []
+
+    def posseg(self, text: str) -> List[Tuple[str, str]]:
+        if self.engine == "jieba":
+            return [(word, flag) for word, flag in pseg.cut(text)]
+        # elif self.engine == "hanlp":
+        #     result = self.pipeline(text)
+        #     return list(zip(result["tok/fine"], result["pos/ctb"]))
+        return []
 
 
 def merge_semantic_units(words: List[str], phrase_set: set) -> List[str]:
@@ -77,7 +93,7 @@ def tag_text_grouped(
     words: List[str], domain_dict: Dict[str, str], count_mode: bool = False
 ) -> Dict[str, dict]:
     """
-    count_mode=False:  {'有害物质': ['硼砂']}
+    count_mode=False: {'有害物质': ['硼砂']}
     count_mode=True:   {'有害物质': {'硼砂': 2}}
     """
     tag_result = defaultdict(Counter if count_mode else list)
@@ -105,14 +121,20 @@ def process_jsonl(
         for line in fr:
             data = json.loads(line)
             text = data.get("text", "")
-            words = segmenter.segment(text)
-            merged_words = merge_semantic_units(words, phrase_set)
+
+            tokenized_text = segmenter.segment(text)
+            pos_tags = segmenter.posseg(text)
+
+            merged_words = merge_semantic_units(tokenized_text, phrase_set)
             tags = tag_text_grouped(merged_words, domain_dict, count_mode=count_mode)
 
             if count_mode:
                 tags = {k: dict(v) for k, v in tags.items()}
 
+            data["tokenized_text"] = tokenized_text
+            data["pos_tags"] = pos_tags
             data["tags"] = tags
+
             fw.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 
@@ -121,10 +143,16 @@ if __name__ == "__main__":
     input_path = "1.weibo_foodsafety.jsonl"
     output_path = "2.weibo_data_tagged.jsonl"
 
+    # Using the jieba engine
+    print("Processing using the jieba engine...")
     segmenter = CustomSegmenter(dict_path, engine="jieba")
 
-    process_jsonl(input_path, output_path, segmenter, True)
+    # Using the hanlp engine
+    # Note: Loading and running HanLP may take a long time.
+    # print("\nProcessing using the hanlp engine...")
+    # segmenter = CustomSegmenter(dict_path, engine="hanlp")
 
+    process_jsonl(input_path, output_path, segmenter, True)
     print(
         f"Processing is complete and the labeled data has been saved to {output_path}"
     )
