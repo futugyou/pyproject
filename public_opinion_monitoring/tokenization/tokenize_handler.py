@@ -2,16 +2,19 @@ import json
 import jieba
 import jieba.posseg as pseg
 import spacy
-from collections import defaultdict
-
-# import hanlp
-from typing import List, Dict, Tuple
 from collections import defaultdict, Counter
+from typing import List, Dict, Tuple
 
+# Load the spaCy model globally
 spacyNlp = spacy.load("zh_core_web_sm")
 
 
 class CustomSegmenter:
+    """
+    Responsible for initializing the custom dictionary and word segmentation engine.
+    Focused on word segmentation and part-of-speech tagging.
+    """
+
     def __init__(self, dict_path: str, engine: str = "jieba"):
         self.engine = engine
         self.dict_path = dict_path
@@ -20,12 +23,11 @@ class CustomSegmenter:
 
         if engine == "jieba":
             self.init_jieba()
-        # elif engine == "hanlp":
-        #     self.init_hanlp()
         else:
-            raise ValueError("engine must be 'jieba' or 'hanlp'")
+            raise ValueError("engine must be 'jieba'")
 
     def load_dict(self, path: str) -> Dict[str, str]:
+        """Load a custom dictionary from a file."""
         d = {}
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
@@ -39,66 +41,44 @@ class CustomSegmenter:
         return d
 
     def init_jieba(self):
+        """Initialize jieba and add a custom dictionary."""
         jieba.initialize()
         for w in self.domain_dict.keys():
+            # jieba.add_word will process words and parts of speech
             jieba.add_word(w)
-
-    # def init_hanlp(self):
-    #     # hanlp.load() now returns a pipeline.
-    #     # This is a general approach to load a model for segmentation and POS tagging.
-    #     self.pipeline = hanlp.load(
-    #         hanlp.pretrained.mtl.CLOSE_TOK_POS_NER_SRL_DEP_SDP_CON_ELECTRA_BASE
-    #     )
-    #     # Add custom dictionary
-    #     for w in self.domain_dict.keys():
-    #         self.pipeline["cws"].add_dictionary(
-    #             w, "ns"
-    #         )  # The second parameter is part of speech.
+        # After adding the dictionary, you need to reload the jieba word segmenter
+        jieba.load_userdict(self.dict_path)
 
     def segment(self, text: str) -> List[str]:
-        if self.engine == "jieba":
-            return list(jieba.cut(text))
-        # elif self.engine == "hanlp":
-        #     return self.pipeline(text)["tok/fine"]
-        else:
-            return []
+        """Use jieba for word segmentation."""
+        return list(jieba.cut(text))
 
     def posseg(self, text: str) -> List[Tuple[str, str]]:
-        if self.engine == "jieba":
-            return [(word, flag) for word, flag in pseg.cut(text)]
-        # elif self.engine == "hanlp":
-        #     result = self.pipeline(text)
-        #     return list(zip(result["tok/fine"], result["pos/ctb"]))
-        return []
+        """Use jieba for part-of-speech tagging."""
+        return [(word, flag) for word, flag in pseg.cut(text)]
 
 
-def merge_semantic_units(words: List[str], phrase_set: set) -> List[str]:
-    merged = []
-    i = 0
-    while i < len(words):
-        if i + 2 < len(words):
-            tri = words[i] + words[i + 1] + words[i + 2]
-            if tri in phrase_set:
-                merged.append(tri)
-                i += 3
-                continue
-        if i + 1 < len(words):
-            bi = words[i] + words[i + 1]
-            if bi in phrase_set:
-                merged.append(bi)
-                i += 2
-                continue
-        merged.append(words[i])
-        i += 1
-    return merged
+def spacy_process(text: str) -> Dict[str, any]:
+    """
+    Use spaCy's complete NLP pipeline to perform tokenization, part-of-speech tagging, and entity recognition in one go.
+    """
+    doc = spacyNlp(text)
+
+    # Get tokenization and part-of-speech tags
+    tokens_and_pos = [(token.text, token.pos_) for token in doc]
+
+    # Extract entities identified by spaCy
+    spacy_entities = defaultdict(list)
+    _ = [spacy_entities[ent.text].append(ent.label_) for ent in doc.ents]
+
+    return {"tokens_and_pos": tokens_and_pos, "spacy_entities": dict(spacy_entities)}
 
 
-def tag_text_grouped(
+def tag_custom_units(
     words: List[str], domain_dict: Dict[str, str], count_mode: bool = False
 ) -> Dict[str, dict]:
     """
-    count_mode=False: {'有害物质': ['硼砂']}
-    count_mode=True:   {'有害物质': {'硼砂': 2}}
+    Specially designed to process words in custom dictionaries and perform classification and counting.
     """
     tag_result = defaultdict(Counter if count_mode else list)
     for w in words:
@@ -109,14 +89,22 @@ def tag_text_grouped(
             else:
                 if w not in tag_result[category]:
                     tag_result[category].append(w)
-    return tag_result
+    if count_mode:
+        return {k: dict(v) for k, v in tag_result.items()}
+    else:
+        return dict(tag_result)
 
 
-def process_jsonl(
-    input_path: str, output_path: str, segmenter: CustomSegmenter, count_mode=False
+def process_jsonl_optimized(
+    input_path: str,
+    output_path: str,
+    segmenter: CustomSegmenter,
+    count_mode: bool = False,
 ):
+    """
+    Process JSONL files according to the new logic.
+    """
     domain_dict = segmenter.domain_dict
-    phrase_set = segmenter.phrase_set
 
     with (
         open(input_path, "r", encoding="utf-8") as fr,
@@ -126,24 +114,22 @@ def process_jsonl(
             data = json.loads(line)
             text = data.get("text", "")
 
-            tokenized_text = segmenter.segment(text)
-            pos_tags = segmenter.posseg(text)
+            # 1. Use Jieba for word segmentation and part-of-speech tagging, focusing on custom lexicons
+            jieba_tokens = segmenter.segment(text)
+            jieba_pos_tags = segmenter.posseg(text)
 
-            merged_words = merge_semantic_units(tokenized_text, phrase_set)
-            tags = tag_text_grouped(merged_words, domain_dict, count_mode=count_mode)
-            if count_mode:
-                tags = {k: dict(v) for k, v in tags.items()}
+            # 2. Use spaCy for general tasks and retrieve common entities
+            spacy_results = spacy_process(text)
 
-            doc = spacyNlp(text)
-            entity_dict = defaultdict(list)
+            # 3. Use Jieba's word segmentation results to specifically process custom lexicons
+            custom_tags = tag_custom_units(jieba_tokens, domain_dict, count_mode)
 
-            entity_dict = defaultdict(list)
-            _ = [entity_dict[ent.text].append(ent.label_) for ent in doc.ents]
-
-            data["tokenized_text"] = tokenized_text
-            data["pos_tags"] = pos_tags
-            data["tags"] = tags
-            data["entity_dict"] = dict(entity_dict)
+            # 4. Combine all results into the output data
+            data["jieba_tokens"] = jieba_tokens
+            data["jieba_pos_tags"] = jieba_pos_tags
+            data["tags"] = custom_tags
+            data["spacy_pos_tags"] = spacy_results["tokens_and_pos"]
+            data["spacy_entities"] = spacy_results["spacy_entities"]
 
             fw.write(json.dumps(data, ensure_ascii=False) + "\n")
 
@@ -151,18 +137,12 @@ def process_jsonl(
 if __name__ == "__main__":
     dict_path = "custom_food_dict.txt"
     input_path = "1.weibo_foodsafety.jsonl"
-    output_path = "2.weibo_data_tagged.jsonl"
+    output_path = "2.weibo_data_tagged_optimized.jsonl"
 
-    # Using the jieba engine
     print("Processing using the jieba engine...")
     segmenter = CustomSegmenter(dict_path, engine="jieba")
 
-    # Using the hanlp engine
-    # Note: Loading and running HanLP may take a long time.
-    # print("\nProcessing using the hanlp engine...")
-    # segmenter = CustomSegmenter(dict_path, engine="hanlp")
-
-    process_jsonl(input_path, output_path, segmenter, True)
+    process_jsonl_optimized(input_path, output_path, segmenter, True)
     print(
         f"Processing is complete and the labeled data has been saved to {output_path}"
     )
