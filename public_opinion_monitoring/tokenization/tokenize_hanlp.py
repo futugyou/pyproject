@@ -61,6 +61,28 @@ def tag_custom_units(
         return dict(tag_result)
 
 
+def get_event_triples(doc):
+    event_triples = []
+    for token in doc["syntactic_analysis"].tokens:
+        if token.pos == "VERB":
+            predicate = token.text
+            srl_info = token.srl
+            if srl_info:
+                subject = None
+                obj = None
+                for role in srl_info:
+                    if role.label == "A0":
+                        subject = role.text
+                    elif role.label == "A1":
+                        obj = role.text
+
+                if subject and obj:
+                    event_triples.append(
+                        {"subject": subject, "predicate": predicate, "object": obj}
+                    )
+    return event_triples
+
+
 def process_jsonl_hanlp(input_path: str, output_path: str, count_mode: bool = False):
     """
     Process JSONL files using a HanLP pipeline.
@@ -102,6 +124,7 @@ def process_jsonl_hanlp(input_path: str, output_path: str, count_mode: bool = Fa
             data["hanlp_pos_tags"] = pos_tagged_tokens
             data["hanlp_entities"] = dict(hanlp_entities)
             data["custom_tags"] = custom_tags
+            data["raw_event_triples"] = get_event_triples(result)
 
             fw.write(json.dumps(data, ensure_ascii=False) + "\n")
 

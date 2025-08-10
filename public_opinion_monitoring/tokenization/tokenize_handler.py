@@ -63,7 +63,7 @@ def spacy_process(text: str) -> Dict[str, any]:
     Use spaCy's complete NLP pipeline to perform tokenization, part-of-speech tagging, and entity recognition in one go.
     """
     doc = spacyNlp(text)
-
+    event_triples = get_event_triples(doc)
     # Get tokenization and part-of-speech tags
     tokens_and_pos = [(token.text, token.pos_) for token in doc]
 
@@ -71,7 +71,11 @@ def spacy_process(text: str) -> Dict[str, any]:
     spacy_entities = defaultdict(list)
     _ = [spacy_entities[ent.text].append(ent.label_) for ent in doc.ents]
 
-    return {"tokens_and_pos": tokens_and_pos, "spacy_entities": dict(spacy_entities)}
+    return {
+        "tokens_and_pos": tokens_and_pos,
+        "spacy_entities": dict(spacy_entities),
+        "event_triples": event_triples,
+    }
 
 
 def tag_custom_units(
@@ -93,6 +97,39 @@ def tag_custom_units(
         return {k: dict(v) for k, v in tag_result.items()}
     else:
         return dict(tag_result)
+
+
+def get_event_triples(doc):
+    event_triples = []
+    for token in doc:
+        if token.pos_ == "VERB":
+            predicate = token.text
+            subject = None
+            obj = None
+
+            for child in token.children:
+                if child.dep_ == "nsubj":
+                    subject = "".join(t.text for t in child.subtree)
+                elif child.dep_ in ["dobj", "pobj"]:
+                    obj = "".join(t.text for t in child.subtree)
+
+            if not subject:
+                for t in reversed(list(token.lefts)):
+                    if t.pos_ == "NOUN":
+                        subject = t.text
+                        break
+
+            if not obj:
+                for t in list(token.rights):
+                    if t.pos_ in ["NOUN", "PROPN"]:
+                        obj = t.text
+                        break
+
+            if subject and obj:
+                event_triples.append(
+                    {"subject": subject, "predicate": predicate, "object": obj}
+                )
+    return event_triples
 
 
 def process_jsonl_optimized(
@@ -130,6 +167,7 @@ def process_jsonl_optimized(
             data["tags"] = custom_tags
             data["spacy_pos_tags"] = spacy_results["tokens_and_pos"]
             data["spacy_entities"] = spacy_results["spacy_entities"]
+            data["raw_event_triples"] = spacy_results["event_triples"]
 
             fw.write(json.dumps(data, ensure_ascii=False) + "\n")
 
