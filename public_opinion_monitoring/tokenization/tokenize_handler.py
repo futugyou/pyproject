@@ -1,10 +1,14 @@
 import json
 import jieba
 import jieba.posseg as pseg
+import spacy
+from collections import defaultdict
 
 # import hanlp
 from typing import List, Dict, Tuple
 from collections import defaultdict, Counter
+
+spacyNlp = spacy.load("zh_core_web_sm")
 
 
 class CustomSegmenter:
@@ -127,13 +131,19 @@ def process_jsonl(
 
             merged_words = merge_semantic_units(tokenized_text, phrase_set)
             tags = tag_text_grouped(merged_words, domain_dict, count_mode=count_mode)
-
             if count_mode:
                 tags = {k: dict(v) for k, v in tags.items()}
+
+            doc = spacyNlp(text)
+            entity_dict = defaultdict(list)
+
+            entity_dict = defaultdict(list)
+            _ = [entity_dict[ent.text].append(ent.label_) for ent in doc.ents]
 
             data["tokenized_text"] = tokenized_text
             data["pos_tags"] = pos_tags
             data["tags"] = tags
+            data["entity_dict"] = dict(entity_dict)
 
             fw.write(json.dumps(data, ensure_ascii=False) + "\n")
 

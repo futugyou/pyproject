@@ -7,8 +7,12 @@ requires-python = ">=3.11"
 dependencies = [
     "dotenv>=0.9.9",
     "jieba>=0.42.1",
-    "openai>=1.99.1",
+    "openai>=1.99.6",
+    "pip>=25.2",
     "pydantic>=2.11.7",
     "requests>=2.32.4",
+    "setuptools>=80.9.0",
+    "spacy>=3.8.7",
     "tqdm>=4.67.1",
+    "wheel>=0.45.1",
 ]
