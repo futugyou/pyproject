@@ -2,6 +2,7 @@ import json
 import asyncio
 import aiofiles
 import os
+import re
 
 from collections import defaultdict, Counter
 from pydantic import BaseModel, Field, ValidationError
@@ -129,54 +130,81 @@ QueryMode = Literal[
     "number_of_hazards",  # Number of hazards associated with each food item (originally search_number_of_hazards)
 ]
 
+_NODE_ALIAS_MAP = {
+    "food": "f",
+    "f": "f",
+    "hazard": "h",
+    "h": "h",
+    "relation": "r",
+    "rel": "r",
+    "r": "r",
+}
+
+_PROP_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 
 async def search_knowledge_graph(
     mode: QueryMode = "list",
-    field: Optional[str] = None,
-    value: Optional[str] = None,
-    fuzzy: bool = False,
+    node: Optional[str] = None,  # For example, "hazard" or "h" or "food"
+    prop: Optional[str] = None,  # For example, "name", "id", "description"
+    value: Optional[str] = None,  # Filter value
+    fuzzy: bool = False,  # Whether to perform fuzzy matching (only valid in list mode)
 ):
     """
-    Unified Neo4j query entry
-    :param mode: Query mode
-    :param field: Optional filter field (e.g., "h.name", "f.name")
-    :param value: The value corresponding to the filter field
-    :param fuzzy: whether to perform fuzzy matching (only valid in list mode)
+    - mode="list": Returns (Food, Hazard, Relation.description), supports optional filtering
+    - mode="detection_count": Returns (Hazard, DetectionCount)
+    - mode="number_of_hazards": Returns (Food, DetectedHazards, NumberOfHazards)
     """
 
     cypher_map = {
-        "list": """
-            MATCH (f:Food)-[r:DETECTED]->(h:Hazard)
-        """,
-        "detection_count": """
-            MATCH (f:Food)-[r:DETECTED]->(h:Hazard)
-            RETURN h.name AS Hazard, count(f) AS DetectionCount
-            ORDER BY DetectionCount DESC
-        """,
-        "number_of_hazards": """
-            MATCH (f:Food)-[r:DETECTED]->(h:Hazard)
-            RETURN f.name AS Food, collect(h.name) AS DetectedHazards, count(r) AS NumberOfHazards
-        """,
+        "list": "MATCH (f:Food)-[r:DETECTED]->(h:Hazard)\n",
+        "detection_count": (
+            "MATCH (f:Food)-[r:DETECTED]->(h:Hazard)\n"
+            "RETURN h.name AS Hazard, count(f) AS DetectionCount\n"
+            "ORDER BY DetectionCount DESC\n"
+        ),
+        "number_of_hazards": (
+            "MATCH (f:Food)-[r:DETECTED]->(h:Hazard)\n"
+            "RETURN f.name AS Food, collect(h.name) AS DetectedHazards, count(r) AS NumberOfHazards\n"
+        ),
     }
 
     if mode not in cypher_map:
-        raise ValueError(f"Unsupported mode: {mode}")
+        raise ValueError(f"unsupported mode: {mode}")
 
     query = cypher_map[mode]
-    params = {}
+    params: Dict[str, str] = {}
 
     if mode == "list":
-        if field and value:
-            if fuzzy:
-                query += f" WHERE toLower({field}) CONTAINS toLower($value)"
+        if (node is None) ^ (prop is None):
+            raise ValueError(
+                "If you want to filter, please pass in both node and prop, for example, node='hazard', prop='name'"
+            )
+
+        if node and prop:
+            alias_key = node.lower()
+            if alias_key not in _NODE_ALIAS_MAP:
+                raise ValueError(
+                    f"unsupported node: {node}. allowed: {list(_NODE_ALIAS_MAP.keys())}"
+                )
+
+            alias = _NODE_ALIAS_MAP[alias_key]
+
+            if not _PROP_RE.match(prop):
+                raise ValueError(f"invalid property name: {prop}")
+
+            if fuzzy or ("*" in (value or "") or "%" in (value or "")):
+                v = (value or "").replace("*", "").replace("%", "")
+                query += f" WHERE toLower({alias}.{prop}) CONTAINS toLower($value)"
+                params["value"] = v
             else:
-                query += f" WHERE {field} = $value"
-            params["value"] = value
+                query += f" WHERE {alias}.{prop} = $value"
+                params["value"] = value
 
-        query += """
-            RETURN f.name AS Food, h.name AS Hazard, r.description AS Description
-        """
-
+        query += (
+            " RETURN f.name AS Food, h.name AS Hazard, r.description AS Description"
+        )
+    print(query)
     async with AsyncGraphDatabase.driver(URI, auth=AUTH) as driver:
         await driver.verify_connectivity()
         records, summary, keys = await driver.execute_query(
@@ -198,10 +226,16 @@ async def search_knowledge_graph(
 async def search_demo():
     result = await search_knowledge_graph(mode="list")
     print(result)
-    result = await search_knowledge_graph(mode="list", field="h.name", value="硼砂成分")
+    result = await search_knowledge_graph(
+        mode="list", node="hazard", prop="name", value="硼砂成分"
+    )
     print(result)
     result = await search_knowledge_graph(
-        mode="list", field="f.name", value="燕皮扁食", fuzzy=True
+        mode="list", node="hazard", prop="name", value="*硼砂*"
+    )
+    print(result)
+    result = await search_knowledge_graph(
+        mode="list", node="food", prop="name", value="燕皮扁食", fuzzy=True
     )
     print(result)
     result = await search_knowledge_graph(mode="detection_count")
@@ -212,6 +246,6 @@ async def search_demo():
 
 if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
-    # asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
-    asyncio.run(search_demo())
+    asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
+    # asyncio.run(search_demo())
     print(f"Processing completed")
