@@ -124,7 +124,36 @@ async def generate_knowledge_graph_from_jsonl(
                 )
 
 
+async def search_knowledge_graph_by_nazard(hazard_name: str):
+    """
+    Search knowledge graph by nazard name
+    """
+
+    with (
+        GraphDatabase.driver(URI, auth=AUTH) as driver,
+    ):
+        driver.verify_connectivity()
+        records, summary, keys = driver.execute_query(
+            """        
+            MATCH (f:Food)-[r:DETECTED]->(h:Hazard {name: $subject})
+            RETURN f.name AS Food, h.name AS Hazard, r.description AS Description
+            """,
+            subject=hazard_name,
+            routing_="r",
+            database_="neo4j",
+        )
+        
+        return {
+            "records": records,
+            "keys": keys,
+            "query": summary.query,
+            "records_count": len(records),
+            "time": summary.result_available_after,
+        }
+
+
 if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
     asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
+    # asyncio.run(search_knowledge_graph_by_nazard("硼砂成分"))
     print(f"Processing completed")
