@@ -65,18 +65,38 @@ def create_event_triple(session, subject, predicate, obj, description):
     return result.consume()
 
 
-async def process_jsonl_file(
+def create_event_triple_with_execute_query(
+    driver, subject, obj, predicate, description
+):
+    query = """
+    MERGE (food:Food {name: $subject})
+    MERGE (hazard:Hazard {name: $obj})
+    MERGE (food)-[rel:DETECTED]->(hazard)
+    ON CREATE SET rel.description = $description, rel.predicate = $predicate
+    """
+    records, summary, keys = driver.execute_query(
+        query,
+        subject=subject,
+        obj=obj,
+        predicate=predicate,
+        description=description,
+        database_="neo4j",
+    )
+
+    return summary
+
+
+async def generate_knowledge_graph_from_jsonl(
     input_path: str,
     count_mode: bool = False,
 ):
     """
-    Process JSONL files according to the new logic.
+    Read JSONL files to generate knowledge graphs.
     """
 
     with (
         open(input_path, "r", encoding="utf-8") as fr,
         GraphDatabase.driver(URI, auth=AUTH) as driver,
-        driver.session() as session,
     ):
         driver.verify_connectivity()
 
@@ -91,8 +111,8 @@ async def process_jsonl_file(
                 continue
             print(llm_response.analysis_result.event_triples)
             for event in llm_response.analysis_result.event_triples:
-                summary = create_event_triple(
-                    session,
+                summary = create_event_triple_with_execute_query(
+                    driver,
                     subject=event.subject,
                     predicate=event.predicate,
                     obj=event.object,
@@ -106,5 +126,5 @@ async def process_jsonl_file(
 
 if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
-    asyncio.run(process_jsonl_file(input_jsonl_file))
+    asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
     print(f"Processing completed")
