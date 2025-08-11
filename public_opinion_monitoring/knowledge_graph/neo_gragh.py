@@ -1,11 +1,12 @@
 import json
 import asyncio
+import aiofiles
 import os
 
 from collections import defaultdict, Counter
 from pydantic import BaseModel, Field, ValidationError
 from typing import List, Dict, Tuple, Optional, Any, Literal
-from neo4j import GraphDatabase
+from neo4j import AsyncGraphDatabase
 
 from dotenv import load_dotenv
 
@@ -65,7 +66,7 @@ def create_event_triple(session, subject, predicate, obj, description):
     return result.consume()
 
 
-def create_event_triple_with_execute_query(
+async def create_event_triple_with_execute_query(
     driver, subject, obj, predicate, description
 ):
     query = """
@@ -74,7 +75,7 @@ def create_event_triple_with_execute_query(
     MERGE (food)-[rel:DETECTED]->(hazard)
     ON CREATE SET rel.description = $description, rel.predicate = $predicate
     """
-    records, summary, keys = driver.execute_query(
+    records, summary, keys = await driver.execute_query(
         query,
         subject=subject,
         obj=obj,
@@ -93,35 +94,32 @@ async def generate_knowledge_graph_from_jsonl(
     """
     Read JSONL files to generate knowledge graphs.
     """
+    async with AsyncGraphDatabase.driver(URI, auth=AUTH) as driver:
+        async with aiofiles.open(input_path, "r", encoding="utf-8") as fr:
+            await driver.verify_connectivity()
 
-    with (
-        open(input_path, "r", encoding="utf-8") as fr,
-        GraphDatabase.driver(URI, auth=AUTH) as driver,
-    ):
-        driver.verify_connectivity()
-
-        for line in fr:
-            data = json.loads(line)
-            llm_response = LLMResponse.model_validate_json(line)
-            if (
-                not llm_response
-                or not llm_response.analysis_result
-                or not llm_response.analysis_result.event_triples
-            ):
-                continue
-            print(llm_response.analysis_result.event_triples)
-            for event in llm_response.analysis_result.event_triples:
-                summary = create_event_triple_with_execute_query(
-                    driver,
-                    subject=event.subject,
-                    predicate=event.predicate,
-                    obj=event.object,
-                    description=event.description,
-                )
-                print(f"Nodes created: {summary.counters.nodes_created}")
-                print(
-                    f"Relationships created: {summary.counters.relationships_created}"
-                )
+            async for line in fr:
+                data = json.loads(line)
+                llm_response = LLMResponse.model_validate_json(line)
+                if (
+                    not llm_response
+                    or not llm_response.analysis_result
+                    or not llm_response.analysis_result.event_triples
+                ):
+                    continue
+                print(llm_response.analysis_result.event_triples)
+                for event in llm_response.analysis_result.event_triples:
+                    summary = await create_event_triple_with_execute_query(
+                        driver,
+                        subject=event.subject,
+                        predicate=event.predicate,
+                        obj=event.object,
+                        description=event.description,
+                    )
+                    print(f"Nodes created: {summary.counters.nodes_created}")
+                    print(
+                        f"Relationships created: {summary.counters.relationships_created}"
+                    )
 
 
 # Query mode
@@ -179,9 +177,9 @@ async def search_knowledge_graph(
             RETURN f.name AS Food, h.name AS Hazard, r.description AS Description
         """
 
-    with GraphDatabase.driver(URI, auth=AUTH) as driver:
-        driver.verify_connectivity()
-        records, summary, keys = driver.execute_query(
+    async with AsyncGraphDatabase.driver(URI, auth=AUTH) as driver:
+        await driver.verify_connectivity()
+        records, summary, keys = await driver.execute_query(
             query,
             **params,
             routing_="r",
@@ -214,6 +212,6 @@ async def search_demo():
 
 if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
-    asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
-    # asyncio.run(search_demo())
+    # asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
+    asyncio.run(search_demo())
     print(f"Processing completed")
