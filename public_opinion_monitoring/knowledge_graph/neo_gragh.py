@@ -4,7 +4,7 @@ import os
 
 from collections import defaultdict, Counter
 from pydantic import BaseModel, Field, ValidationError
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Literal
 from neo4j import GraphDatabase
 
 from dotenv import load_dotenv
@@ -124,36 +124,96 @@ async def generate_knowledge_graph_from_jsonl(
                 )
 
 
-async def search_knowledge_graph_by_nazard(hazard_name: str):
+# Query mode
+QueryMode = Literal[
+    "list",  # List mode (originally by_hazard / all)
+    "detection_count",  # Number of hazard detections (originally search_detection_count)
+    "number_of_hazards",  # Number of hazards associated with each food item (originally search_number_of_hazards)
+]
+
+
+async def search_knowledge_graph(
+    mode: QueryMode = "list",
+    field: Optional[str] = None,
+    value: Optional[str] = None,
+    fuzzy: bool = False,
+):
     """
-    Search knowledge graph by nazard name
+    Unified Neo4j query entry
+    :param mode: Query mode
+    :param field: Optional filter field (e.g., "h.name", "f.name")
+    :param value: The value corresponding to the filter field
+    :param fuzzy: whether to perform fuzzy matching (only valid in list mode)
     """
 
-    with (
-        GraphDatabase.driver(URI, auth=AUTH) as driver,
-    ):
+    cypher_map = {
+        "list": """
+            MATCH (f:Food)-[r:DETECTED]->(h:Hazard)
+        """,
+        "detection_count": """
+            MATCH (f:Food)-[r:DETECTED]->(h:Hazard)
+            RETURN h.name AS Hazard, count(f) AS DetectionCount
+            ORDER BY DetectionCount DESC
+        """,
+        "number_of_hazards": """
+            MATCH (f:Food)-[r:DETECTED]->(h:Hazard)
+            RETURN f.name AS Food, collect(h.name) AS DetectedHazards, count(r) AS NumberOfHazards
+        """,
+    }
+
+    if mode not in cypher_map:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    query = cypher_map[mode]
+    params = {}
+
+    if mode == "list":
+        if field and value:
+            if fuzzy:
+                query += f" WHERE toLower({field}) CONTAINS toLower($value)"
+            else:
+                query += f" WHERE {field} = $value"
+            params["value"] = value
+
+        query += """
+            RETURN f.name AS Food, h.name AS Hazard, r.description AS Description
+        """
+
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
         records, summary, keys = driver.execute_query(
-            """        
-            MATCH (f:Food)-[r:DETECTED]->(h:Hazard {name: $subject})
-            RETURN f.name AS Food, h.name AS Hazard, r.description AS Description
-            """,
-            subject=hazard_name,
+            query,
+            **params,
             routing_="r",
             database_="neo4j",
         )
-        
-        return {
-            "records": records,
-            "keys": keys,
-            "query": summary.query,
-            "records_count": len(records),
-            "time": summary.result_available_after,
-        }
+
+    return {
+        "records": records,
+        "keys": keys,
+        "query": summary.query,
+        "records_count": len(records),
+        "time": summary.result_available_after,
+    }
+
+
+async def search_demo():
+    result = await search_knowledge_graph(mode="list")
+    print(result)
+    result = await search_knowledge_graph(mode="list", field="h.name", value="硼砂成分")
+    print(result)
+    result = await search_knowledge_graph(
+        mode="list", field="f.name", value="燕皮扁食", fuzzy=True
+    )
+    print(result)
+    result = await search_knowledge_graph(mode="detection_count")
+    print(result)
+    result = await search_knowledge_graph(mode="number_of_hazards")
+    print(result)
 
 
 if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
     asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
-    # asyncio.run(search_knowledge_graph_by_nazard("硼砂成分"))
+    # asyncio.run(search_demo())
     print(f"Processing completed")
