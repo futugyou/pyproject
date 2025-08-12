@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "aiofiles>=24.1.0",
+    "click>=8.2.1",
     "dotenv>=0.9.9",
     "jieba>=0.42.1",
     "neo4j>=5.28.2",
