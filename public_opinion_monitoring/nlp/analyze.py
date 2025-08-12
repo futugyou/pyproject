@@ -1,8 +1,15 @@
-import json
+import sys
 import os
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, project_root)
+
+import json
 import asyncio
 from openai import AsyncOpenAI
 from tqdm import tqdm
+from models.llm_response import LLMResponse
+
 from dotenv import load_dotenv
 
 load_dotenv()

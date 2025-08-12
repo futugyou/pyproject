@@ -1,5 +1,10 @@
-import json
+import sys
 import os
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, project_root)
+
+import json
 import re
 
 from collections import defaultdict, Counter
@@ -7,6 +12,8 @@ from pydantic import BaseModel, Field, ValidationError
 from typing import List, Dict, Tuple, Optional, Any, Literal
 from py2neo import Graph, Node, Relationship
 from py2neo.matching import NodeMatcher
+
+from models.llm_response import LLMResponse
 
 from dotenv import load_dotenv
 
@@ -18,27 +25,6 @@ AUTH = (os.getenv("NEO_NAME"), os.getenv("NEO_PASSWORD"))
 
 # Pydantic models remain the same as they are independent of the database driver.
 # They are used for data validation and structure.
-
-
-class EventTriple(BaseModel):
-    """事件三元组模型"""
-
-    subject: str = Field(..., description="事件的施事或主体。")
-    predicate: str = Field(..., description="事件的谓词或动作。")
-    object: str = Field(..., description="事件的受事或客体。")
-    description: str = Field(..., description="结合主谓客体，用一句话概括事件。")
-
-
-class AnalysisResult(BaseModel):
-    """最终分析结果模型"""
-
-    event_triples: List[EventTriple]
-
-
-class LLMResponse(BaseModel):
-    """LLM输出的顶层模型"""
-
-    analysis_result: Optional[AnalysisResult] = None
 
 
 def create_event_triple_py2neo(graph, subject, obj, predicate, description):
