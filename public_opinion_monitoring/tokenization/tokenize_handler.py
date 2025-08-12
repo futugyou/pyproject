@@ -132,7 +132,7 @@ def get_event_triples(doc):
     return event_triples
 
 
-def process_jsonl_optimized(
+def process_text_tokenization(
     input_path: str,
     output_path: str,
     segmenter: CustomSegmenter,
@@ -175,12 +175,12 @@ def process_jsonl_optimized(
 if __name__ == "__main__":
     dict_path = "custom_food_dict.txt"
     input_path = "1.weibo_foodsafety.jsonl"
-    output_path = "2.weibo_data_tagged_optimized.jsonl"
+    output_path = "2.weibo_data_tagged.jsonl"
 
     print("Processing using the jieba engine...")
     segmenter = CustomSegmenter(dict_path, engine="jieba")
 
-    process_jsonl_optimized(input_path, output_path, segmenter, True)
+    process_text_tokenization(input_path, output_path, segmenter, True)
     print(
         f"Processing is complete and the labeled data has been saved to {output_path}"
     )

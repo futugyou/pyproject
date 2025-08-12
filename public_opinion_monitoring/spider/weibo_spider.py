@@ -96,7 +96,7 @@ def load_existing_ids(filepath):
     return ids
 
 
-def save_as_jsonl_incremental(data, filename="weibo_foodsafety.jsonl"):
+def save_data_as_jsonl(data, filename="1.weibo_foodsafety.jsonl"):
     existing_ids = load_existing_ids(filename)
     new_entries = [entry for entry in data if entry["weibo_id"] not in existing_ids]
 
@@ -113,4 +113,4 @@ def save_as_jsonl_incremental(data, filename="weibo_foodsafety.jsonl"):
 if __name__ == "__main__":
     keyword = "食品安全"
     data = search_weibo(keyword, max_pages=5)
-    save_as_jsonl_incremental(data, filename="1.weibo_foodsafety.jsonl")
+    save_data_as_jsonl(data, filename="1.weibo_foodsafety.jsonl")

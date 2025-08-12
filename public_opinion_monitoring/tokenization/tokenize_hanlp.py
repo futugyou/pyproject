@@ -83,7 +83,9 @@ def get_event_triples(doc):
     return event_triples
 
 
-def process_jsonl_hanlp(input_path: str, output_path: str, count_mode: bool = False):
+def process_text_tokenization(
+    input_path: str, output_path: str, count_mode: bool = False
+):
     """
     Process JSONL files using a HanLP pipeline.
     """
@@ -134,7 +136,7 @@ if __name__ == "__main__":
     output_path = "2.weibo_data_tagged_hanlp.jsonl"
 
     print("Processing using the HanLP engine...")
-    process_jsonl_hanlp(input_path, output_path, True)
+    process_text_tokenization(input_path, output_path, True)
     print(
         f"Processing is complete and the labeled data has been saved to {output_path}"
     )

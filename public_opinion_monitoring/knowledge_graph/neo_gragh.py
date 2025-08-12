@@ -74,9 +74,8 @@ async def create_event_triple_with_execute_query(
     return summary
 
 
-async def generate_knowledge_graph_from_jsonl(
+async def generate_knowledge_graph(
     input_path: str,
-    count_mode: bool = False,
 ):
     """
     Read JSONL files to generate knowledge graphs.
@@ -232,6 +231,6 @@ async def search_demo():
 
 if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
-    asyncio.run(generate_knowledge_graph_from_jsonl(input_jsonl_file))
+    asyncio.run(generate_knowledge_graph(input_jsonl_file))
     # asyncio.run(search_demo())
     print(f"Processing completed")

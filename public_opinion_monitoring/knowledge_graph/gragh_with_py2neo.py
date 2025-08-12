@@ -50,7 +50,7 @@ def create_event_triple_py2neo(graph, subject, obj, predicate, description):
     return result.stats()
 
 
-def generate_knowledge_graph_from_jsonl_py2neo(
+def generate_knowledge_graph(
     input_path: str,
 ):
     """
@@ -59,7 +59,7 @@ def generate_knowledge_graph_from_jsonl_py2neo(
     """
     # Establish a synchronous connection to the database using py2neo.Graph.
     graph = Graph(URI, auth=AUTH)
-
+    print(input_path)
     # Open the file and process it line by line.
     with open(input_path, "r", encoding="utf-8") as fr:
         for line in fr:
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     input_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
 
     # Use the synchronous py2neo implementation.
-    generate_knowledge_graph_from_jsonl_py2neo(input_jsonl_file)
+    generate_knowledge_graph(input_jsonl_file)
     search_demo_py2neo()
 
     print(f"Processing completed")

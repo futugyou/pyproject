@@ -138,7 +138,7 @@ async def analyze_text_with_llm(text_content, tags_content):
         return {"analysis_result": None}
 
 
-async def process_jsonl_file(input_file, output_file):
+async def process_llm_calling(input_file, output_file):
     """
     Reads a JSONL file, processes each line, and saves the result to a new file.
     """
@@ -198,4 +198,4 @@ async def process_jsonl_file(input_file, output_file):
 if __name__ == "__main__":
     input_jsonl_file = "2.weibo_data_tagged.jsonl"
     output_jsonl_file = "3.1.weibo_data_analyzed_structured.jsonl"
-    asyncio.run(process_jsonl_file(input_jsonl_file, output_jsonl_file))
+    asyncio.run(process_llm_calling(input_jsonl_file, output_jsonl_file))
