@@ -2,11 +2,15 @@ import os
 import shutil
 
 CACHE_DIRS = [
-    '.venv', '.ruff_cache', '__pycache__',
-    '.mypy_cache', '.pytest_cache', '.cache'
+    ".venv",
+    ".ruff_cache",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".cache",
 ]
 
-ROOT = '.'
+ROOT = "."
 
 for dirpath, dirnames, filenames in os.walk(ROOT):
     for cache_dir in CACHE_DIRS:

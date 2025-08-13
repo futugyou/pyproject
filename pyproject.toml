@@ -1,0 +1,16 @@
+[project]
+name = "python-vercel-service"
+version = "0.1.0"
+description = "to project with python"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.116.1",
+    "motor>=3.7.1",
+    "semantic-kernel[google]>=1.35.2",
+    "uvicorn>=0.35.0",
+]
+
+[tool.uv]
+dev-dependencies = ["ruff>=0.8.5"]
