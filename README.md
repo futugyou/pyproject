@@ -6,7 +6,7 @@ python project
 ```
 pip install uv
 uv init 
-pip add dotenv fastapi motor "semantic-kernel[google]" uvicorn
+pip add dotenv fastapi motor "semantic-kernel[google]" uvicorn mcp
 
 uv run uvicorn app.main:app --reload
 ```
