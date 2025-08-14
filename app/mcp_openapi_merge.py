@@ -33,6 +33,20 @@ def _mcp_server_resources(server) -> List[Dict[str, Any]]:
     return out
 
 
+def _mcp_server_prompts(server) -> List[Dict[str, Any]]:
+    """
+    Returns a list of prompts from _prompt_manager
+    """
+
+    prompt_manager = server._prompt_manager
+    out = {}
+
+    if prompt_manager:
+        for t in prompt_manager.list_prompts():
+            out[t.name] = t
+    return out
+
+
 def _mcp_server_resource_templates(server) -> List[Dict[str, Any]]:
     """
     Returns a list of resource templates from resources_manager
@@ -102,12 +116,51 @@ def register_schema_recursive(openapi, schema, default_name, visited=None):
     return {"$ref": f"#/components/schemas/{schema_name}"}
 
 
+def register_tool_schema(openapi, prefix, group, tool):
+    name = tool.name
+    path = f"{prefix}/tools/{name}"
+    description = tool.description
+    if tool.description is not None:
+        description = description.rstrip()
+
+    post_obj = {
+        "summary": f"call {group} mcp tool: {name}",
+        "description": f"""
+        {description}
+
+        Virtual HTTP wrapper: Request bodies calling MCP tool `{name}` will be forwarded to the MCP channel.
+        """,
+        "tags": [f"{group}_tools"],
+        "responses": {"200": {"description": "Tool return result"}},
+    }
+
+    # input schema
+    input_schema = getattr(tool, "parameters", None)
+    input_ref = register_schema_recursive(openapi, input_schema, f"{name}Input")
+    if input_ref:
+        post_obj["requestBody"] = {
+            "required": True,
+            "content": {"application/json": {"schema": input_ref}},
+        }
+
+    # output schema
+    output_schema = getattr(getattr(tool, "fn_metadata", None), "output_schema", None)
+    output_ref = register_schema_recursive(openapi, output_schema, f"{name}Output")
+    if output_ref:
+        post_obj["responses"]["200"]["content"] = {
+            "application/json": {"schema": output_ref}
+        }
+
+    openapi["paths"][path] = {"post": post_obj}
+
+
 def build_mcp_openapi_dict(
     server: Any,
     *,
     title: str = "MCP Server (Virtual HTTP for Docs)",
     version: str = "1.0.0",
     prefix: str = "/api/v1/mcp",
+    group: str = "mcp",
 ) -> Dict[str, Any]:
     """
     Build an OpenAPI for a "virtual endpoint" based on the FastMCP server's registration information.
@@ -120,6 +173,7 @@ def build_mcp_openapi_dict(
     tools = _mcp_server_tools(server)
     resources = _mcp_server_resources(server)
     resource_templates = _mcp_server_resource_templates(server)
+    prompts = _mcp_server_prompts(server)
 
     openapi: Dict[str, Any] = {
         "openapi": "3.0.3",
@@ -128,37 +182,21 @@ def build_mcp_openapi_dict(
         "components": {"schemas": {}},
     }
 
-    # ----------------- create paths -----------------
+    # ----------------- create tools paths -----------------
     for name, tool in tools.items():
-        path = f"{prefix}/tools/{name}"
+        register_tool_schema(openapi, prefix, group, tool)
 
-        post_obj = {
-            "summary": f"Call MCP Tool: {name}",
-            "description": f"{tool.description}Virtual HTTP wrapper: Request bodies calling MCP tool `{name}` will be forwarded to the MCP channel.",
-            "tags": ["mcp-tools"],
-            "responses": {"200": {"description": "Tool return result"}},
-        }
+    # ----------------- create resources paths -----------------
+    for name, resource in resources.items():
+        pass
 
-        # input schema
-        input_schema = getattr(tool, "parameters", None)
-        input_ref = register_schema_recursive(openapi, input_schema, f"{name}Input")
-        if input_ref:
-            post_obj["requestBody"] = {
-                "required": True,
-                "content": {"application/json": {"schema": input_ref}},
-            }
+    # ----------------- create resource_templates paths -----------------
+    for name, template in resource_templates.items():
+        pass
 
-        # output schema
-        output_schema = getattr(
-            getattr(tool, "fn_metadata", None), "output_schema", None
-        )
-        output_ref = register_schema_recursive(openapi, output_schema, f"{name}Output")
-        if output_ref:
-            post_obj["responses"]["200"]["content"] = {
-                "application/json": {"schema": output_ref}
-            }
-
-        openapi["paths"][path] = {"post": post_obj}
+    # ----------------- create prompts paths -----------------
+    for name, prompt in prompts.items():
+        pass
 
     # Resource List
     res_path = f"{prefix}/resources"
