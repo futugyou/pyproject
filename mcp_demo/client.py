@@ -192,8 +192,10 @@ async def main(transport: Literal["stdio", "streamable-http"] = "streamable-http
                 ) as session:
                     await run_session(session)
         else:
-            # for fastapi project`app`, the url is `http://127.0.0.1:8000/api/v1/mcp
-            async with streamablehttp_client("http://127.0.0.1:8080/mcp") as (
+            # for fastapi project`app`, the url is `http://127.0.0.1:8000/api/v1/mcp_demo/mcp`
+            async with streamablehttp_client(
+                "http://127.0.0.1:8000/mcp"
+            ) as (
                 read_stream,
                 write_stream,
                 _,
