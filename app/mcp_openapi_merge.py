@@ -47,6 +47,61 @@ def _mcp_server_resource_templates(server) -> List[Dict[str, Any]]:
     return out
 
 
+def register_schema_recursive(openapi, schema, default_name, visited=None):
+    if visited is None:
+        visited = set()
+
+    if not schema:
+        return None
+
+    if (
+        not schema.get("properties")
+        and not schema.get("additionalProperties")
+        and "$ref" not in schema
+    ):
+        return None
+
+    components = openapi.setdefault("components", {}).setdefault("schemas", {})
+
+    schema_name = schema.get("title") or default_name
+    if schema_name in visited:
+        return {"$ref": f"#/components/schemas/{schema_name}"}
+    visited.add(schema_name)
+
+    defs = schema.get("$defs", {})
+    for def_name, def_schema in defs.items():
+        if def_name not in components:
+            register_schema_recursive(openapi, def_schema, def_name, visited)
+
+    def fix_refs(s):
+        if isinstance(s, dict):
+            new_s = {}
+            for k, v in s.items():
+                if k == "$ref" and isinstance(v, str) and v.startswith("#/$defs/"):
+                    ref_name = v.split("/")[-1]
+                    new_s[k] = f"#/components/schemas/{ref_name}"
+                elif k in ("allOf", "anyOf", "oneOf") and isinstance(v, list):
+                    new_s[k] = [fix_refs(item) for item in v]
+                elif k == "not" and isinstance(v, dict):
+                    new_s[k] = fix_refs(v)
+                else:
+                    new_s[k] = fix_refs(v)
+            return new_s
+        elif isinstance(s, list):
+            return [fix_refs(item) for item in s]
+        else:
+            return s
+
+    schema_clean = dict(schema)
+    schema_clean.pop("$defs", None)
+    schema_clean = fix_refs(schema_clean)
+
+    if schema_name not in components:
+        components[schema_name] = schema_clean
+
+    return {"$ref": f"#/components/schemas/{schema_name}"}
+
+
 def build_mcp_openapi_dict(
     server: Any,
     *,
@@ -73,55 +128,34 @@ def build_mcp_openapi_dict(
         "components": {"schemas": {}},
     }
 
-    openapi.setdefault("components", {}).setdefault("schemas", {})
-
-    # Tools: Mapped to POST /tools/{name}
+    # ----------------- create paths -----------------
     for name, tool in tools.items():
-        input_schema = getattr(tool, "parameters", None)
-        output_schema = getattr(
-            getattr(tool, "fn_metadata", None), "output_schema", None
-        )
-
         path = f"{prefix}/tools/{name}"
 
         post_obj = {
             "summary": f"Call MCP Tool: {name}",
-            "description": (
-                f"""{tool.description}
-
-Virtual HTTP wrapper: Request bodies calling MCP tool `{name}`
-will be forwarded to the MCP channel.
-"""
-            ),
+            "description": f"{tool.description}Virtual HTTP wrapper: Request bodies calling MCP tool `{name}` will be forwarded to the MCP channel.",
             "tags": ["mcp-tools"],
-            "responses": {
-                "200": {
-                    "description": "Tool return result (transmitted MCP response result as is)"
-                }
-            },
+            "responses": {"200": {"description": "Tool return result"}},
         }
 
         # input schema
-        if input_schema:
-            schema_name = f"{name}Input"
-            openapi["components"]["schemas"][schema_name] = input_schema
+        input_schema = getattr(tool, "parameters", None)
+        input_ref = register_schema_recursive(openapi, input_schema, f"{name}Input")
+        if input_ref:
             post_obj["requestBody"] = {
                 "required": True,
-                "content": {
-                    "application/json": {
-                        "schema": {"$ref": f"#/components/schemas/{schema_name}"}
-                    }
-                },
+                "content": {"application/json": {"schema": input_ref}},
             }
 
         # output schema
-        if output_schema:
-            schema_name = f"{name}Output"
-            openapi["components"]["schemas"][schema_name] = output_schema
+        output_schema = getattr(
+            getattr(tool, "fn_metadata", None), "output_schema", None
+        )
+        output_ref = register_schema_recursive(openapi, output_schema, f"{name}Output")
+        if output_ref:
             post_obj["responses"]["200"]["content"] = {
-                "application/json": {
-                    "schema": {"$ref": f"#/components/schemas/{schema_name}"}
-                }
+                "application/json": {"schema": output_ref}
             }
 
         openapi["paths"][path] = {"post": post_obj}
