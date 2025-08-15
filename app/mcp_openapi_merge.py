@@ -3,6 +3,49 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import inspect
+from pathlib import Path
+from typing import Any
+import re
+
+
+def add_resource_properties(schema: dict, resource: Any, attrs: list):
+    """
+    Dynamically adds non-None properties from resource to schema['properties'].
+    Automatically handles types:
+    - str -> string
+    - Path -> string
+    - bytes -> string + format: binary
+    """
+    for attr in attrs:
+        value = get_attr(resource, attr, None)
+        if value is not None:
+            prop_schema = {"example": None}
+            if isinstance(value, bytes):
+                prop_schema.update(
+                    {
+                        "type": "string",
+                        "format": "binary",
+                        "description": f"Binary content of {attr}",
+                        "example": "<binary content omitted>",
+                    }
+                )
+            elif isinstance(value, Path):
+                prop_schema.update(
+                    {
+                        "type": "string",
+                        "description": f"Path to {attr}",
+                        "example": str(value),
+                    }
+                )
+            else:
+                prop_schema.update({"type": "string", "example": str(value)})
+            schema["properties"][attr] = prop_schema
+
+
+def get_attr(obj, key, default=None):
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
 
 def _mcp_server_tools(server) -> Dict[str, Any]:
@@ -154,6 +197,69 @@ def register_tool_schema(openapi, prefix, group, tool):
     openapi["paths"][path] = {"post": post_obj}
 
 
+def register_resource_schema(openapi, prefix, group, resource):
+    """
+    Register an MCP resource into the OpenAPI spec for documentation purposes.
+    Output schema will be registered with register_schema_recursive for consistency with tools.
+    """
+    name = resource.name
+    uri_template = str(resource.uri)
+    description = resource.description.rstrip()
+    title = resource.title
+    mime_type = resource.mime_type
+
+    path = f"{prefix}/resources/{name}"
+    path_params = re.findall(r"\{([^}]+)\}", uri_template)
+
+    post_obj = {
+        "summary": f"call {group} mcp resource: {name}",
+        "description": f"""
+        {description}
+
+        Virtual HTTP wrapper: Request bodies calling MCP resource `{name}` will be forwarded to the MCP channel.
+        uriTemplate: `{uri_template}`
+        """,
+        "tags": [f"{group}_resources"],
+        "parameters": [],
+        "responses": {"200": {"description": "Resource return result"}},
+    }
+
+    for p in path_params:
+        post_obj["parameters"].append(
+            {
+                "name": p,
+                "in": "path",
+                "required": True,
+                "schema": {"type": "string"},
+                "description": f"{p} extracted from uriTemplate",
+            }
+        )
+
+    output_schema = {
+        "type": "object",
+        "properties": {
+            "uriTemplate": {"type": "string", "example": uri_template},
+            "name": {"type": "string", "example": name},
+            "title": {"type": "string", "example": title},
+            "description": {"type": "string", "example": description},
+            "mimeType": {"type": "string", "example": mime_type},
+        },
+        "required": ["uriTemplate", "name", "title", "description", "mimeType"],
+    }
+
+    attrs = ["path", "pattern", "text", "data"]
+    add_resource_properties(output_schema, resource, attrs)
+
+    output_ref = register_schema_recursive(
+        openapi, output_schema, f"{name}ResourceOutput"
+    )
+
+    if output_ref:
+        post_obj["responses"]["200"]["content"] = {mime_type: {"schema": output_ref}}
+
+    openapi["paths"][path] = {"post": post_obj}
+
+
 def build_mcp_openapi_dict(
     server: Any,
     *,
@@ -188,7 +294,7 @@ def build_mcp_openapi_dict(
 
     # ----------------- create resources paths -----------------
     for name, resource in resources.items():
-        pass
+        register_resource_schema(openapi, prefix, group, resource)
 
     # ----------------- create resource_templates paths -----------------
     for name, template in resource_templates.items():
