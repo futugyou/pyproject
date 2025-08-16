@@ -6,6 +6,10 @@ import inspect
 from pathlib import Path
 from typing import Any
 import re
+import asyncio
+from faker import Faker
+
+fake = Faker("en_US")
 
 
 def add_resource_properties(schema: dict, resource: Any, attrs: list):
@@ -62,9 +66,9 @@ def _mcp_server_tools(server) -> Dict[str, Any]:
     return out
 
 
-def _mcp_server_resources(server) -> List[Dict[str, Any]]:
+def _mcp_server_resources(server) -> Dict[str, Any]:
     """
-    Returns a list of resources from resources_manager
+    Returns a dict of resources from resources_manager
     """
 
     resource_manager = server._resource_manager
@@ -76,9 +80,9 @@ def _mcp_server_resources(server) -> List[Dict[str, Any]]:
     return out
 
 
-def _mcp_server_prompts(server) -> List[Dict[str, Any]]:
+def _mcp_server_prompts(server) -> Dict[str, Any]:
     """
-    Returns a list of prompts from _prompt_manager
+    Returns a dict of prompts from _prompt_manager
     """
 
     prompt_manager = server._prompt_manager
@@ -90,9 +94,9 @@ def _mcp_server_prompts(server) -> List[Dict[str, Any]]:
     return out
 
 
-def _mcp_server_resource_templates(server) -> List[Dict[str, Any]]:
+def _mcp_server_resource_templates(server) -> Dict[str, Any]:
     """
-    Returns a list of resource templates from resources_manager
+    Returns a dict of resource templates from resources_manager
     """
 
     resource_manager = server._resource_manager
@@ -260,7 +264,142 @@ def register_resource_schema(openapi, prefix, group, resource):
     openapi["paths"][path] = {"post": post_obj}
 
 
-def build_mcp_openapi_dict(
+def register_resource_template_schema(openapi, prefix, group, template):
+    """
+    Register an MCP resource template into the OpenAPI spec for documentation purposes.
+    Output schema will be registered with register_schema_recursive for consistency with tools.
+    """
+    uri_template = str(template.uri_template)
+    name = template.name
+    title = template.title
+    description = template.description.rstrip()
+    mime_type = template.mime_type
+
+    path = f"{prefix}/templates/{name}"
+    path_params = re.findall(r"\{([^}]+)\}", uri_template)
+
+    post_obj = {
+        "summary": f"call {group} mcp resource template: {name}",
+        "description": f"""
+        {description}
+
+        Virtual HTTP wrapper: Request bodies calling MCP resource template `{name}` will be forwarded to the MCP channel.
+        uriTemplate: `{uri_template}`
+        """,
+        "tags": [f"{group}_templates"],
+        "parameters": [],
+        "responses": {"200": {"description": "Resource template return result"}},
+    }
+
+    for p in path_params:
+        post_obj["parameters"].append(
+            {
+                "name": p,
+                "in": "path",
+                "required": True,
+                "schema": {"type": "string"},
+                "description": f"{p} extracted from uriTemplate",
+            }
+        )
+
+    # input schema
+    input_schema = getattr(template, "parameters", None)
+    input_ref = register_schema_recursive(openapi, input_schema, f"{name}Input")
+    if input_ref:
+        post_obj["requestBody"] = {
+            "required": True,
+            "content": {"application/json": {"schema": input_ref}},
+        }
+
+    output_schema = {
+        "type": "object",
+        "properties": {
+            "uriTemplate": {"type": "string", "example": uri_template},
+            "name": {"type": "string", "example": name},
+            "title": {"type": "string", "example": title},
+            "description": {"type": "string", "example": description},
+            "mimeType": {"type": "string", "example": mime_type},
+        },
+        "required": ["uriTemplate", "name", "title", "description", "mimeType"],
+    }
+
+    output_ref = register_schema_recursive(
+        openapi, output_schema, f"{name}ResourceTemplateOutput"
+    )
+
+    if output_ref:
+        post_obj["responses"]["200"]["content"] = {mime_type: {"schema": output_ref}}
+
+    openapi["paths"][path] = {"post": post_obj}
+
+
+async def register_prompt_schema(openapi, prefix, group, prompt):
+    """
+    Register an MCP prompt into the OpenAPI spec for documentation purposes.
+    Output schema will be registered with register_schema_recursive for consistency with tools.
+    """
+    name = prompt.name
+    description = prompt.description.rstrip()
+    title = prompt.title
+
+    path = f"{prefix}/prompts/{name}"
+
+    post_obj = {
+        "summary": f"call {group} mcp prompt: {name}",
+        "description": f"""
+        {description}
+
+        Virtual HTTP wrapper: Request bodies calling MCP prompt `{name}` will be forwarded to the MCP channel.
+        """,
+        "tags": [f"{group}_prompts"],
+        "parameters": [],
+        "responses": {"200": {"description": "Prompt return result"}},
+    }
+
+    fake_args = {}
+    for p in prompt.arguments:
+        if p.required:
+            fake_args[p.name] = fake.word()
+        post_obj["parameters"].append(
+            {
+                "name": p.name,
+                "in": "path",
+                "required": p.required,
+                "schema": {"type": "string"},
+                "description": p.name,
+            }
+        )
+
+    prompt_result = ""
+    try:
+        messages = await prompt.render(fake_args)
+        for message in messages:
+            text = get_attr(message.content, "text", None)
+            if text is not None:
+                prompt_result += text + " "
+    finally:
+        pass
+    output_schema = {
+        "type": "object",
+        "properties": {
+            "prompt": {"type": "string", "example": prompt_result},
+        },
+        "required": ["prompt"],
+    }
+
+    output_ref = register_schema_recursive(
+        openapi, output_schema, f"{name}PromptOutput"
+    )
+
+    if output_ref:
+        post_obj["responses"]["200"]["content"] = {
+            "application/json": {"schema": output_ref}
+        }
+
+    openapi["paths"][path] = {"post": post_obj}
+
+
+async def build_mcp_openapi_dict(
     server: Any,
     *,
     title: str = "MCP Server (Virtual HTTP for Docs)",
@@ -298,11 +437,11 @@ def build_mcp_openapi_dict(
 
     # ----------------- create resource_templates paths -----------------
     for name, template in resource_templates.items():
-        pass
+        register_resource_template_schema(openapi, prefix, group, template)
 
     # ----------------- create prompts paths -----------------
     for name, prompt in prompts.items():
-        pass
+        await register_prompt_schema(openapi, prefix, group, prompt)
 
     # Resource List
     res_path = f"{prefix}/resources"

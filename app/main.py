@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
                 mcp.mcp_app.router.lifespan_context(mcp.mcp_app)
             )
 
-            mcp_oa = build_mcp_openapi_dict(
+            mcp_oa = await build_mcp_openapi_dict(
                 mcp.mcp_server,
                 title=mcp.name,
                 version=mcp.version,
