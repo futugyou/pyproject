@@ -18,7 +18,7 @@ uv run uvicorn app.main:app --reload
 
 `app` use for faskapi server
 
-`transformers_demo` only for google colab
+`google_colab` only for google colab
 
 And other floders are services used by `app`
 
