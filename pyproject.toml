@@ -16,3 +16,8 @@ dependencies = [
 
 [tool.uv]
 dev-dependencies = ["ruff>=0.8.5"]
+
+[tool.uv.workspace]
+members = [
+    "mcp_adapter",
+]

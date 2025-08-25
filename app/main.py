@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.api.v1 import router as v1_router
-from mcp_demo.server import create_resource_server
+from mcp_adapter.server import create_resource_server
 from app.mcp_openapi_merge import build_mcp_openapi_dict, merge_openapi_into_app
 from contextlib import asynccontextmanager, AsyncExitStack
 from dataclasses import dataclass
@@ -19,9 +19,9 @@ class McpServer:
 
 mcp_servers = [
     McpServer(
-        name="mcp_demo",
-        prefix="/api/v1/mcp_demo",
-        group="mcp_demo",
+        name="mcp_adapter",
+        prefix="/api/v1/mcp_adapter",
+        group="mcp_adapter",
         version="1.0.0",
         mcp_server=(server := create_resource_server()),
         mcp_app=server.streamable_http_app(),

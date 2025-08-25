@@ -1,10 +1,10 @@
 [project]
-name = "mcp-demo"
+name = "mcp-adapter"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mcp[cli]>=1.12.3",
+    "mcp[cli]>=1.12.4",
     "pillow>=11.3.0",
 ]
