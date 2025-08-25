@@ -12,7 +12,7 @@ from .mcp_extensions import register_extensions
 logger = logging.getLogger(__name__)
 
 
-def create_resource_server() -> FastMCP:
+def create_mcp_server() -> FastMCP:
     app = FastMCP(
         name="mcp_adapter", port=8080, debug=True, dependencies=["pyautogui", "Pillow"]
     )
@@ -34,7 +34,7 @@ def main(
     try:
         logger.info(f"transport: {transport}")
         print(f"transport: {transport}")
-        mcp_server = create_resource_server()
+        mcp_server = create_mcp_server()
         mcp_server.run(transport=transport)
         logger.info("Server stopped")
         return 0

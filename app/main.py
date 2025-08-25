@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.api.v1 import router as v1_router
-from mcp_adapter.server import create_resource_server
+from mcp_adapter.server import create_mcp_server
 from app.mcp_openapi_merge import build_mcp_openapi_dict, merge_openapi_into_app
 from contextlib import asynccontextmanager, AsyncExitStack
 from dataclasses import dataclass
@@ -23,7 +23,7 @@ mcp_servers = [
         prefix="/api/v1/mcp_adapter",
         group="mcp_adapter",
         version="1.0.0",
-        mcp_server=(server := create_resource_server()),
+        mcp_server=(server := create_mcp_server()),
         mcp_app=server.streamable_http_app(),
     )
 ]
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
                 group=mcp.group,
             )
 
-        merge_openapi_into_app(app, mcp_oa)
+            merge_openapi_into_app(app, mcp_oa)
 
         yield
 
