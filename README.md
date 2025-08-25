@@ -8,8 +8,6 @@ Write a project in Python
 pip install uv
 uv init 
 pip add dotenv fastapi motor "semantic-kernel[google]" uvicorn mcp
-
-uv run uvicorn app.main:app --reload
 ```
 
 ## Structure
@@ -27,4 +25,18 @@ And other floders are services used by `app`
 ```
 pip install ruff
 ruff format .
+```
+
+## Run
+
+```
+uv run uvicorn app.main:app --reload
+uv run -m mcp_adapter.server or uv run -m mcp_adapter.main
+uv run -m mcp_adapter.client
+```
+
+## Other
+
+```
+source /workspace/pyproject/.venv/bin/activate
 ```
