@@ -14,9 +14,7 @@ class ArticleAnalysis(BaseModel):
     entities: list[str]
 
 
-def get_agents() -> list[Agent]:
-    from service import chat_completion_service
-
+def get_agents(chat_completion_service) -> list[Agent]:
     theme_agent = ChatCompletionAgent(
         name="ThemeAgent",
         instructions="You are an expert in identifying themes in articles. Given an article, identify the main themes.",
@@ -42,9 +40,12 @@ On a dark winter night, a ghost walks the ramparts of Elsinore Castle in Denmark
 
 
 async def main():
-    from service import chat_completion_service
+    from ..service import build_kernel_pipeline
 
-    agents = get_agents()
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
+
+    agents = get_agents(chat_completion_service)
     concurrent_orchestration = ConcurrentOrchestration[str, ArticleAnalysis](
         members=agents,
         output_transform=structured_outputs_transform(

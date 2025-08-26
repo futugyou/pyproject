@@ -75,7 +75,11 @@ async def chat(
 
 
 async def main() -> None:
-    from service import kernel, chat_completion_service, audio_to_text_service
+    from ..service import build_kernel_pipeline
+
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
+    audio_to_text_service = kernel.get_service("audio_to_text")
 
     print(
         "Instruction: when it's your turn to speak, press the spacebar to start recording."

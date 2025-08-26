@@ -13,9 +13,7 @@ logging.getLogger("semantic_kernel.agents.orchestration.sequential").setLevel(
 )
 
 
-def get_agents() -> list[Agent]:
-    from service import chat_completion_service
-
+def get_agents(chat_completion_service) -> list[Agent]:
     concept_extractor_agent = ChatCompletionAgent(
         name="ConceptExtractorAgent",
         instructions=(
@@ -76,9 +74,12 @@ def streaming_agent_response_callback(
 
 
 async def main():
-    from service import chat_completion_service
+    from ..service import build_kernel_pipeline
 
-    agents = get_agents()
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
+
+    agents = get_agents(chat_completion_service)
     sequential_orchestration = SequentialOrchestration(
         members=agents,
         # agent_response_callback=agent_response_callback,

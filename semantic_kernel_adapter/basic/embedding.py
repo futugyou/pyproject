@@ -213,7 +213,9 @@ async def chat(
 if __name__ == "__main__":
 
     async def main():
-        from service import kernel
+        from ..service import build_kernel_pipeline
+
+        kernel = build_kernel_pipeline()
 
         collection, history = await init_embedding(kernel)
         await search_memory_examples(

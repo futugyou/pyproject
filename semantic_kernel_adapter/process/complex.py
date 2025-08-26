@@ -223,6 +223,8 @@ async def step01_processes(kernel: Kernel, scripted: bool = True):
 
 
 if __name__ == "__main__":
-    from service import kernel
+    from ..service import build_kernel_pipeline
+
+    kernel = build_kernel_pipeline()
 
     asyncio.run(step01_processes(kernel=kernel, scripted=False))

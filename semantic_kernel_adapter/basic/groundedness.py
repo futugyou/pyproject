@@ -66,7 +66,9 @@ async def groundedness(kernel: Kernel) -> KernelPlugin:
 if __name__ == "__main__":
 
     async def main():
-        from service import kernel
+        from ..service import build_kernel_pipeline
+
+        kernel = build_kernel_pipeline()
 
         functions = await groundedness(kernel)
         entity_extraction = functions["ExtractEntities"]

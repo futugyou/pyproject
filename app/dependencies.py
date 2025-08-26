@@ -1,6 +1,7 @@
 from fastapi import Depends
 from app.core.database import db
-from app.core.kernel import kernel
+
+from semantic_kernel_adapter import service
 
 
 async def get_db():
@@ -8,4 +9,8 @@ async def get_db():
 
 
 async def get_kernel():
-    return kernel
+    return service.get_kernel()
+
+
+async def get_kernel_full():
+    return service.build_kernel_pipeline()

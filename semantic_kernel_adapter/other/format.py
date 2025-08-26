@@ -10,7 +10,10 @@ from semantic_kernel.connectors.ai import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory, StreamingChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
-from service import kernel, chat_completion_service
+
+from ..service import build_kernel_pipeline
+
+kernel = build_kernel_pipeline()
 
 system_message = """
 You are a helpful math tutor. Guide the user through the solution step by step.

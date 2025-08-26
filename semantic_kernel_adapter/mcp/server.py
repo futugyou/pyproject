@@ -28,9 +28,9 @@ with the following configuration:
         "sk": {
             "command": "uv",
             "args": [
-                "--directory=./semantic_kernel_service",
+                "--directory=./semantic_kernel_adapter/mcp",
                 "run",
-                "v22_mcp_server.py"
+                "server.py"
             ],
             "env": {
                 "OPENAI_API_KEY": "<your_openai_api_key>",
@@ -48,7 +48,7 @@ Note: You might need to set the uv to its full path.
 Alternatively, you can run this as a SSE server, by setting the same environment variables as above, 
 and running the following command:
 ```bash
-uv --directory=./semantic_kernel_service run sk_mcp_server.py --transport sse --port 8000
+uv --directory=./semantic_kernel_adapter/mcp run server.py --transport sse --port 8000
 ```
 This will start a server that listens for incoming requests on port 8000.
 

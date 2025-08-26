@@ -35,9 +35,7 @@ from semantic_kernel.contents import (
 )
 
 
-def get_agents() -> list[Agent]:
-    from service import chat_completion_service
-
+def get_agents(chat_completion_service) -> list[Agent]:
     farmer = ChatCompletionAgent(
         name="Farmer",
         description="A rural farmer from Southeast Asia.",
@@ -390,9 +388,12 @@ def streaming_agent_response_callback(
 
 
 async def main():
-    from service import chat_completion_service
+    from ..service import build_kernel_pipeline
 
-    agents = get_agents()
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
+
+    agents = get_agents(chat_completion_service)
     # group_chat_orchestration = GroupChatOrchestration(
     #     members=agents,
     #     # max_rounds is odd, so that the writer gets the last round

@@ -62,9 +62,7 @@ class GithubPlugin:
         )
 
 
-def get_agents() -> tuple[list[Agent], OrchestrationHandoffs]:
-    from service import chat_completion_service
-
+def get_agents(chat_completion_service) -> tuple[list[Agent], OrchestrationHandoffs]:
     triage_agent = ChatCompletionAgent(
         name="TriageAgent",
         description="An agent that triages GitHub issues",
@@ -141,9 +139,12 @@ def custom_input_transform(input_message: GithubIssue) -> ChatMessageContent:
 
 
 async def main():
-    from service import chat_completion_service
+    from ..service import build_kernel_pipeline
 
-    agents, handoffs = get_agents()
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
+
+    agents, handoffs = get_agents(chat_completion_service)
     handoff_orchestration = HandoffOrchestration[GithubIssue, ChatMessageContent](
         members=agents,
         handoffs=handoffs,

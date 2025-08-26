@@ -1,5 +1,6 @@
 from semantic_kernel import Kernel
 from pathlib import Path
+import asyncio
 
 
 async def generate_joke(kernel: Kernel, topic: str, style: str = "silly") -> str:
@@ -13,3 +14,15 @@ async def generate_joke(kernel: Kernel, topic: str, style: str = "silly") -> str
     jokeFunction = funFunctions["Joke"]
     result = await kernel.invoke(jokeFunction, input=topic, style=style)
     return str(result)
+
+
+if __name__ == "__main__":
+
+    async def main():
+        from ..service import build_kernel_pipeline
+
+        kernel = build_kernel_pipeline()
+        result = await generate_joke(kernel, "travel to dinosaur age", "silly")
+        print(result)
+
+    asyncio.run(main())

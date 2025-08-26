@@ -139,7 +139,10 @@ async def generate_summarize(
 if __name__ == "__main__":
 
     async def main():
-        from service import kernel, text_embedding_service
+        from ..service import build_kernel_pipeline
+
+        kernel = build_kernel_pipeline()
+        text_embedding_service = kernel.get_service(service_id="embedding")
 
         # create the in-memory vector store
         vector_store = InMemoryStore(embedding_generator=text_embedding_service)

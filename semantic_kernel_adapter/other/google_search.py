@@ -10,7 +10,11 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.filters import FilterTypes, FunctionInvocationContext
 from semantic_kernel.functions import KernelParameterMetadata
 
-from service import kernel, chat_completion_service
+
+from ..service import build_kernel_pipeline
+
+kernel = build_kernel_pipeline()
+chat_completion_service = kernel.get_service("default")
 
 kernel.add_function(
     plugin_name="google",

@@ -76,12 +76,14 @@ def get_audio_to_text_service(
 
 
 def build_kernel_pipeline(
-    option: SemanticKernelOption,
+    option: SemanticKernelOption | None = None,
     kernel: Kernel | None = None,
     chat_service_id: str = "default",
     embedding_service_id: str = "embedding",
     audio_service_id: str = "audio_to_text",
 ) -> Kernel:
+    if option is None:
+        option = SemanticKernelOption()
     if kernel is None:
         kernel = get_kernel()
     kernel.add_service(get_chat_completion_service(option, chat_service_id))
@@ -90,5 +92,7 @@ def build_kernel_pipeline(
     return kernel
 
 
-def get_memory_client(option: SemanticKernelOption) -> MemoryClient:
+def get_memory_client(option: SemanticKernelOption | None = None) -> MemoryClient:
+    if option is None:
+        option = SemanticKernelOption()
     return MemoryClient(api_key=option.mem0_api_key)

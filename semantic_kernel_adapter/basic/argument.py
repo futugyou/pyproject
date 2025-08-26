@@ -58,7 +58,9 @@ async def generate_arguments(
 if __name__ == "__main__":
 
     async def main():
-        from service import kernel
+        from ..service import build_kernel_pipeline
+
+        kernel = build_kernel_pipeline()
 
         chat_history = ChatHistorySummarizationReducer(
             service=kernel.get_service("default"),

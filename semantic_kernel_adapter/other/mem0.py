@@ -24,7 +24,9 @@ async def mem0_demo(memoryClient: MemoryClient) -> str:
 if __name__ == "__main__":
 
     async def main():
-        from service import memoryClient
+        from ..service import get_memory_client
+
+        memoryClient = get_memory_client()
 
         result = await mem0_demo(memoryClient)
         print(result)

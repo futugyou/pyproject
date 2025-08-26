@@ -5,7 +5,10 @@ from semantic_kernel.filters import AutoFunctionInvocationContext, FilterTypes
 from semantic_kernel.connectors.ai import FunctionChoiceBehavior
 from typing import Annotated
 from semantic_kernel.functions import kernel_function, KernelArguments
-from service import kernel, chat_completion_service
+
+from ..service import build_kernel_pipeline
+
+kernel = build_kernel_pipeline()
 
 
 @kernel.filter(FilterTypes.AUTO_FUNCTION_INVOCATION)

@@ -30,7 +30,10 @@ def parse_arguments():
 
 
 async def main(transport: Literal["sse", "stdio", "http"] = "stdio"):
-    from service import chat_completion_service
+    from ..service import build_kernel_pipeline
+
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
 
     mcp_agent: MCPPluginBase = None
     if transport == "stdio":
@@ -39,9 +42,9 @@ async def main(transport: Literal["sse", "stdio", "http"] = "stdio"):
             description="Menu plugin, for details about the menu, call this plugin.",
             command="uv",
             args=[
-                "--directory=./semantic_kernel_service",
+                "--directory=./semantic_kernel_adapter/mcp",
                 "run",
-                "v22_mcp_server.py",
+                "server.py",
             ],
             env={
                 "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),

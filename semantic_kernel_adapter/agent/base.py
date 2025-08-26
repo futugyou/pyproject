@@ -10,8 +10,10 @@ USER_INPUTS = [
 
 
 async def main():
-    from service import chat_completion_service
+    from ..service import build_kernel_pipeline
 
+    kernel = build_kernel_pipeline()
+    chat_completion_service = kernel.get_service("default")
     # 1. Create the agent by specifying the service
     agent = ChatCompletionAgent(
         service=chat_completion_service,

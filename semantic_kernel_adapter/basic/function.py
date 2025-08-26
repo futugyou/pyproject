@@ -108,7 +108,9 @@ async def generate_kernel_plugin_function(
 if __name__ == "__main__":
 
     async def main():
-        from service import kernel
+        from ..service import build_kernel_pipeline
+
+        kernel = build_kernel_pipeline()
 
         plugin, func = await generate_kernel_plugin_function(kernel)
         generateNumber = plugin["GenerateNumber"]
