@@ -1,0 +1,11 @@
+[project]
+name = "semantic-kernel-adapter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mem0ai>=0.1.116",
+    "pydantic-settings>=2.10.1",
+    "semantic-kernel[autogen,google,mongo]>=1.35.2",
+]
