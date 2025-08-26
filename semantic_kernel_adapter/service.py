@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import (
@@ -27,9 +28,11 @@ class SemanticKernelOption(BaseSettings):
 
     mem0_api_key: str
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 def get_kernel() -> Kernel:
