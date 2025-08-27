@@ -7,19 +7,35 @@ from pydantic import BaseModel
 from app.dependencies import get_kernel_full
 from semantic_kernel_adapter import basic, service
 
-router = APIRouter(prefix="/sk", tags=["semantic_kernel"])
+router = APIRouter(prefix="/sk_basic", tags=["semantic_kernel_basic"])
 
 
 class ChatRequest(BaseModel):
     input_text: str = "travel to dinosaur age"
 
 
-@router.post("/base")
-async def sk_base(request: ChatRequest, kernel=Depends(get_kernel_full)):
+@router.post("/joke_generator")
+async def sk_local_plugin(request: ChatRequest, kernel=Depends(get_kernel_full)):
+    """Add KernelPlugin from directory"""
+
     input_text = request.input_text
-    result = await basic.chat.generate_joke(kernel, input_text, "silly")
+    result = await basic.local_plugin.generate_joke(kernel, input_text, "silly")
     return result
 
 
-class PromptRequest(BaseModel):
-    input_text: str
+class BookRecommendationRequest(BaseModel):
+    input_text: str = "I love history and philosophy, I'd like to learn something new about Greece, any suggestion?"
+
+
+@router.post("/book_recommendation")
+async def book_recommendation(
+    request: ChatRequest, kernel=Depends(get_kernel_full)
+) -> str:
+    """use `ChatHistorySummarizationReducer` to reduce the chat history"""
+
+    input_text = request.input_text
+    chat_history = await basic.history_summarization_reducer.chat_history_with_summary(
+        kernel, [input_text]
+    )
+    summary = basic.history_summarization_reducer.get_chat_history_summary(chat_history)
+    return summary
