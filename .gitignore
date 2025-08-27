@@ -192,3 +192,5 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+public_opinion_monitoring/tmp
+public_opinion_monitoring/md_files
