@@ -91,18 +91,40 @@ class GenerateNumberPlugin:
             raise e
 
 
-async def generate_kernel_plugin_function(
-    kernel: Kernel,
-) -> tuple[KernelPlugin, KernelFunction]:
+async def generate_kernel_plugins(kernel: Kernel) -> dict[str, KernelPlugin]:
     kernel.add_plugin(GenerateNamesPlugin(), plugin_name="GenerateNames")
-    func = kernel.add_function(
+
+    kernel.add_plugin(GenerateNumberPlugin(), "GenerateNumberPlugin")
+
+    kernel.add_function(
         function_name="CorgiStory",
         plugin_name="CorgiPlugin",
         prompt_template_config=prompt_template_config,
     )
 
-    plugin = kernel.add_plugin(GenerateNumberPlugin(), "GenerateNumberPlugin")
-    return plugin, func
+    return kernel.plugins
+
+
+async def three_ways_to_call_kernel_function(kernel: Kernel) -> list[str]:
+    plugins = await generate_kernel_plugins(kernel)
+
+    reuslt_list = []
+
+    generateNumber = plugins["GenerateNumberPlugin"]["GenerateNumber"]
+    number_result = await generateNumber(kernel, min=1, max=5)
+    reuslt_list.append(str(number_result))
+
+    generateNames = plugins["GenerateNames"].get("generate_names")
+    name_result = await generateNames(kernel)
+    reuslt_list.append(str(name_result))
+
+    story = plugins["CorgiPlugin"]["CorgiStory"]
+    story_result = await story.invoke(
+        kernel, paragraph_count=number_result.value, language="Spanish"
+    )
+    reuslt_list.append(str(story_result))
+
+    return reuslt_list
 
 
 if __name__ == "__main__":
@@ -111,18 +133,7 @@ if __name__ == "__main__":
         from ..service import build_kernel_pipeline
 
         kernel = build_kernel_pipeline()
-
-        plugin, func = await generate_kernel_plugin_function(kernel)
-        generateNumber = plugin["GenerateNumber"]
-        number_result = await generateNumber(kernel, min=1, max=5)
-        print(number_result)
-        story = await func.invoke(
-            kernel, paragraph_count=number_result.value, language="Spanish"
-        )
-        print(
-            f"Generating a corgi story exactly {number_result.value} paragraphs long."
-        )
-        print("=====================================================")
-        print(story)
+        results = await three_ways_to_call_kernel_function(kernel)
+        print(results)
 
     asyncio.run(main())
