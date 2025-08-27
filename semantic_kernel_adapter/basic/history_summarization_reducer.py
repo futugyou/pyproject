@@ -42,17 +42,36 @@ async def chat(
     # chat_history.add_assistant_message(str(answer))
 
 
-async def generate_arguments(
-    kernel: Kernel, input_texts: list[str], chat_history: ChatHistory
+async def chat_history_with_summary(
+    kernel: Kernel, input_texts: list[str]
 ) -> ChatHistory:
+    chat_history = ChatHistorySummarizationReducer(
+        service=kernel.get_service("default"),
+        target_count=1,
+        threshold_count=0,
+        auto_reduce=True,
+    )
+    chat_history.add_system_message(
+        "You are a helpful chatbot who is good about giving book recommendations."
+    )
     chat_function = kernel.add_function(
         function_name="chat",
         plugin_name="chatPlugin",
         prompt_template_config=prompt_template_config,
     )
+
     for input_text in input_texts:
         await chat(input_text, kernel, chat_function, chat_history)
+
     return chat_history
+
+
+def get_chat_history_summary(chat_history: ChatHistory) -> str:
+    summary = ""
+    for msg in chat_history.messages:
+        if msg.metadata and msg.metadata.get("__summary__"):
+            summary += msg.content
+    return summary
 
 
 if __name__ == "__main__":
@@ -61,30 +80,14 @@ if __name__ == "__main__":
         from ..service import build_kernel_pipeline
 
         kernel = build_kernel_pipeline()
-
-        chat_history = ChatHistorySummarizationReducer(
-            service=kernel.get_service("default"),
-            target_count=1,
-            threshold_count=0,
-            auto_reduce=True,
-        )
-        chat_history.add_system_message(
-            "You are a helpful chatbot who is good about giving book recommendations."
-        )
-
-        chat_function = await generate_arguments(
-            kernel,
-            [
-                "Hi, I'm looking for book suggestions",
-                "I love history and philosophy, I'd like to learn something new about Greece, any suggestion?",
-            ],
-            chat_history,
-        )
+        input_texts = [
+            "Hi, I'm looking for book suggestions",
+            "I love history and philosophy, I'd like to learn something new about Greece, any suggestion?",
+        ]
+        chat_history = await chat_history_with_summary(kernel, input_texts)
         print(chat_history)
-
-        for msg in chat_history.messages:
-            if msg.metadata and msg.metadata.get("__summary__"):
-                print("Summary detected:", msg.content)
-                print("\n")
+        print()
+        summary = get_chat_history_summary(chat_history)
+        print("Summary:", summary)
 
     asyncio.run(main())
