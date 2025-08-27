@@ -29,7 +29,7 @@ class BookRecommendationRequest(BaseModel):
 
 @router.post("/book_recommendation")
 async def book_recommendation(
-    request: ChatRequest, kernel=Depends(get_kernel_full)
+    request: BookRecommendationRequest, kernel=Depends(get_kernel_full)
 ) -> str:
     """use `ChatHistorySummarizationReducer` to reduce the chat history"""
 
@@ -39,3 +39,11 @@ async def book_recommendation(
     )
     summary = basic.history_summarization_reducer.get_chat_history_summary(chat_history)
     return summary
+
+
+@router.post("/call_kernel_function")
+async def call_kernel_function(kernel=Depends(get_kernel_full)) -> list[str]:
+    """use three ways to call kernel function"""
+
+    results = await basic.function.three_ways_to_call_kernel_function(kernel)
+    return results

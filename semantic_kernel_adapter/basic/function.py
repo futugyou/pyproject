@@ -114,9 +114,11 @@ async def three_ways_to_call_kernel_function(kernel: Kernel) -> list[str]:
     number_result = await generateNumber(kernel, min=1, max=5)
     reuslt_list.append(str(number_result))
 
-    generateNames = plugins["GenerateNames"].get("generate_names")
-    name_result = await generateNames(kernel)
-    reuslt_list.append(str(name_result))
+    # Call directly or call inside a function.
+
+    # generateNames = plugins["GenerateNames"].get("generate_names")
+    # name_result = await generateNames(kernel)
+    # reuslt_list.append(str(name_result))
 
     story = plugins["CorgiPlugin"]["CorgiStory"]
     story_result = await story.invoke(
