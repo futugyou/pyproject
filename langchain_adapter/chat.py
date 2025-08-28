@@ -39,6 +39,19 @@ def generate_joke(input_text: str, config: LangChainOption) -> Joke:
     return few_shot_structured_llm.invoke(input_text)
 
 
+def generate_joke_stream(input_text: str, config: LangChainOption):
+    llm = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    structured_llm = llm.with_structured_output(Joke)
+    few_shot_structured_llm = prompt | structured_llm
+    for chunk in few_shot_structured_llm.stream(input_text):
+        print(chunk.punchline, end="|", flush=True)
+
+
 if __name__ == "__main__":
-    result = generate_joke("Tell me a joke about cats", LangChainOption())
-    print(result)
+    # result = generate_joke("Tell me a joke about cats", LangChainOption())
+    # print(result)
+    generate_joke_stream("Tell me a joke about cats", LangChainOption())
