@@ -1,8 +1,21 @@
 from langchain.chat_models import init_chat_model
+from langchain_core.prompts import ChatPromptTemplate
+
 from typing import Optional
 from pydantic import BaseModel, Field
 
 from .option import LangChainOption
+
+
+system = """You are a hilarious comedian. Your specialty is knock-knock jokes. \
+Return a joke which has the setup (the response to "Who's there?") and the final punchline (the response to "<setup> who?").
+
+Here are some examples of jokes:
+
+example_user: Tell me a joke about planes
+example_assistant: {{"setup": "Why don't planes ever get tired?", "punchline": "Because they have rest wings!", "rating": 2}}"""
+
+prompt = ChatPromptTemplate.from_messages([("system", system), ("human", "{input}")])
 
 
 class Joke(BaseModel):
@@ -22,8 +35,8 @@ def generate_joke(input_text: str, config: LangChainOption) -> Joke:
         api_key=config.lang_google_api_key,
     )
     structured_llm = llm.with_structured_output(Joke)
-
-    return structured_llm.invoke(input_text)
+    few_shot_structured_llm = prompt | structured_llm
+    return few_shot_structured_llm.invoke(input_text)
 
 
 if __name__ == "__main__":
