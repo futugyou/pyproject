@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from pydantic import BaseModel
-from langchain_adapter import chat, option, tool
+from langchain_adapter import chat, option, tool, multimodal
 
 router = APIRouter(prefix="/langchain", tags=["lang_chain"])
 
@@ -27,4 +27,11 @@ async def calculate(request: CalculateRequest):
     query = request.query
     config = option.LangChainOption()
     result = tool.calculate(query, config)
+    return result
+
+
+@router.post("/describe_image")
+async def describe_image(request: multimodal.MultimodalData):
+    config = option.LangChainOption()
+    result = multimodal.multimodal(request, config)
     return result
