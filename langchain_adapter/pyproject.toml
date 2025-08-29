@@ -7,5 +7,6 @@ requires-python = ">=3.11"
 dependencies = [
     "langchain-community>=0.3.21",
     "langchain[google-genai]>=0.3.27",
+    "langgraph>=0.6.6",
     "pydantic-settings>=2.10.1",
 ]
