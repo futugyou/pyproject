@@ -10,10 +10,34 @@ from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
 )
 
+from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.prompts import PromptTemplate
+
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from .option import LangChainOption
+
+
+class LineListOutputParser(BaseOutputParser[List[str]]):
+    """Output parser for a list of lines."""
+
+    def parse(self, text: str) -> List[str]:
+        lines = text.strip().split("\n")
+        return list(filter(None, lines))  # Remove empty lines
+
+
+output_parser = LineListOutputParser()
+
+QUERY_PROMPT = PromptTemplate(
+    input_variables=["question"],
+    template="""You are an AI language model assistant. Your task is to generate five 
+    different versions of the given user question to retrieve relevant documents from a vector 
+    database. By generating multiple perspectives on the user question, your goal is to help
+    the user overcome some of the limitations of the distance-based similarity search. 
+    Provide these alternative questions separated by newlines.
+    Original question: {question}""",
+)
 
 
 def generate_embedding(input_texts: List[str], config: LangChainOption):
@@ -67,6 +91,22 @@ def multi_query_retriever(question: str, vectordb, config: LangChainOption):
     return retriever_from_llm.invoke(question)
 
 
+def multi_query_retriever_with_output(question: str, vectordb, config: LangChainOption):
+    llm = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    llm_chain = QUERY_PROMPT | llm | output_parser
+
+    # MultiQueryRetriever.from_llm is implemented like this
+    retriever_from_llm = MultiQueryRetriever(
+        retriever=vectordb.as_retriever(), llm_chain=llm_chain, parser_key="lines"
+    )
+
+    return retriever_from_llm.invoke(question)
+
+
 if __name__ == "__main__":
     config = LangChainOption()
     # result = generate_embedding(
@@ -87,5 +127,6 @@ if __name__ == "__main__":
     vectordb = vectordb_with_Chroma(
         "https://learn.microsoft.com/zh-cn/azure/architecture/ai-ml/", config
     )
-    doc = multi_query_retriever("What is ai-concepts?", vectordb, config)
+    # doc = multi_query_retriever("What is ai-concepts?", vectordb, config)
+    doc = multi_query_retriever_with_output("What is ai-concepts?", vectordb, config)
     print(doc)
