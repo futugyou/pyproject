@@ -5,6 +5,7 @@ from pydantic import ConfigDict
 class LangChainOption(BaseSettings):
     lang_google_api_key: str
     lang_google_chat_model: str
+    lang_google_embedding_model: str
 
     model_config = ConfigDict(
         env_file=".env",

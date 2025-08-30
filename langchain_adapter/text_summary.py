@@ -1,4 +1,5 @@
 import requests
+
 # need unstructured[all]
 from unstructured.partition.pdf import partition_pdf
 from io import BytesIO
