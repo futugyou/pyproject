@@ -3,23 +3,31 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
+from langchain_community.document_transformers import LongContextReorder
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import CharacterTextSplitter
-
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import PromptTemplate
 
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from .option import LangChainOption
 
+prompt_template = """
+Given these texts:
+-----
+{context}
+-----
+Please answer the following question:
+{query}
+"""
 
-def pretty_print_docs(docs):
-    print(
-        f"\n{'-' * 100}\n".join(
-            [f"Document {i + 1}:\n\n" + d.page_content for i, d in enumerate(docs)]
-        )
-    )
+prompt = PromptTemplate(
+    template=prompt_template,
+    input_variables=["context", "query"],
+)
 
 
 def get_retriever(config: LangChainOption):
@@ -34,24 +42,27 @@ def get_retriever(config: LangChainOption):
     return FAISS.from_documents(texts, embedding).as_retriever()
 
 
-def contextual_compression(question: str, retriever, config: LangChainOption):
+def reorder_retrieved_results(retriever, query):
+    docs = retriever.invoke(query)
+    reordering = LongContextReorder()
+    reordered_docs = reordering.transform_documents(docs)
+    return reordered_docs
+
+
+def llm_invoke(reordered_docs, query, config: LangChainOption):
     llm = init_chat_model(
         config.lang_google_chat_model,
         model_provider="google_genai",
         api_key=config.lang_google_api_key,
     )
-    compressor = LLMChainExtractor.from_llm(llm)
-    compression_retriever = ContextualCompressionRetriever(
-        base_compressor=compressor, base_retriever=retriever
-    )
-
-    return compression_retriever.invoke(question)
+    chain = create_stuff_documents_chain(llm, prompt)
+    return chain.invoke({"context": reordered_docs, "query": query})
 
 
 if __name__ == "__main__":
     config = LangChainOption()
+    query = "What did the president say about Ketanji Jackson Brown"
     retriever = get_retriever(config)
-    doc = contextual_compression(
-        "What did the president say about Ketanji Jackson Brown", retriever, config
-    )
-    pretty_print_docs(doc)
+    reordered_docs = reorder_retrieved_results(retriever, query)
+    docs = llm_invoke(reordered_docs, query, config)
+    print(docs)
