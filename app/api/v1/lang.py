@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from pydantic import BaseModel
-from langchain_adapter import chat, option, tool, multimodal, agent, embedding
+from langchain_adapter import chat, option, tool, multimodal, agent, embedding, compression
 
 router = APIRouter(prefix="/langchain", tags=["lang_chain"])
 
@@ -66,4 +66,13 @@ async def multi_query_retriever(
     config = option.LangChainOption()
     vectordb = embedding.vectordb_with_Chroma(path, config)
     doc = embedding.multi_query_retriever_with_output(question, vectordb, config)
-    return result
+    return doc
+
+@router.post("/contextual_compression")
+async def contextual_compression(question: str = "What did the president say about Ketanji Jackson Brown"):
+    """do retrieval with contextual compression"""
+
+    config = option.LangChainOption()
+    retriever = compression.get_retriever(config)
+    doc = compression.contextual_compression(question, retriever, config)
+    return doc
