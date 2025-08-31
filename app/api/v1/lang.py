@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from pydantic import BaseModel
-from langchain_adapter import chat, option, tool, multimodal, agent
+from langchain_adapter import chat, option, tool, multimodal, agent, embedding
 
 router = APIRouter(prefix="/langchain", tags=["lang_chain"])
 
@@ -44,4 +44,26 @@ async def calculate2(request: CalculateRequest):
 async def describe_image(request: multimodal.MultimodalData):
     config = option.LangChainOption()
     result = multimodal.multimodal(request, config)
+    return result
+
+
+@router.post("/retriever")
+async def retriever(question: str = "what is `Structure`?"):
+    """Get information from local files"""
+
+    config = option.LangChainOption()
+    result = embedding.retriever(question, "./README.md", config)
+    return result
+
+
+@router.post("/multi_query_retriever")
+async def multi_query_retriever(
+    question: str = "What is ai-concepts?",
+    path: str = "https://learn.microsoft.com/zh-cn/azure/architecture/ai-ml/",
+):
+    """Get information from network files"""
+
+    config = option.LangChainOption()
+    vectordb = embedding.vectordb_with_Chroma(path, config)
+    doc = embedding.multi_query_retriever_with_output(question, vectordb, config)
     return result

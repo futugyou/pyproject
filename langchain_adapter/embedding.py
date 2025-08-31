@@ -48,7 +48,7 @@ def generate_embedding(input_texts: List[str], config: LangChainOption):
     return embeddings_model.embed_documents(input_texts)
 
 
-def retriever(path: str, config: LangChainOption):
+def retriever(question: str, path: str, config: LangChainOption):
     embeddings_model = GoogleGenerativeAIEmbeddings(
         model=config.lang_google_embedding_model,
         google_api_key=config.lang_google_api_key,
@@ -60,7 +60,7 @@ def retriever(path: str, config: LangChainOption):
     texts = text_splitter.split_documents(documents)
     vectorstore = FAISS.from_documents(texts, embeddings_model)
     retriever = vectorstore.as_retriever()
-    return retriever.invoke("what is `Structure`?")
+    return retriever.invoke(question)
 
 
 def vectordb_with_Chroma(path: str, config: LangChainOption):
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # )
     # print(result)
 
-    # doc = retriever("./README.md", config)
+    # doc = retriever("what is `Structure`?", "./README.md", config)
     # print(doc)
 
     vectordb = vectordb_with_Chroma(
