@@ -51,7 +51,7 @@ async def retrieval_passthrough(config: LangChainOption):
         | StrOutputParser()
     )
 
-    result = retrieval_chain.invoke("where did harrison work?")
+    result = await retrieval_chain.ainvoke("where did harrison work?")
     print(result)
 
 
