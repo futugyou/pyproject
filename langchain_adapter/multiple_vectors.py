@@ -112,10 +112,12 @@ def retriever_with_summaries(summaries, config: LangChainOption):
     retriever.docstore.mset(list(zip(doc_ids, docs)))
     return retriever
 
+
 class HypotheticalQuestions(BaseModel):
     """Generate hypothetical questions."""
 
     questions: List[str] = Field(..., description="List of questions")
+
 
 def hypothetical_queries(docs, config: LangChainOption):
     llm = init_chat_model(
@@ -129,14 +131,11 @@ def hypothetical_queries(docs, config: LangChainOption):
         | ChatPromptTemplate.from_template(
             "Generate a list of exactly 3 hypothetical questions that the below document could be used to answer:\n\n{doc}"
         )
-        | llm.with_structured_output(
-            HypotheticalQuestions
-        )
+        | llm.with_structured_output(HypotheticalQuestions)
         | (lambda x: x.questions)
     )
     hypothetical_questions = chain.batch(docs, {"max_concurrency": 5})
     return hypothetical_questions
-
 
 
 def retriever_with_hypothetical_queries(hypothetical_queries, config: LangChainOption):
@@ -145,7 +144,9 @@ def retriever_with_hypothetical_queries(hypothetical_queries, config: LangChainO
         google_api_key=config.lang_google_api_key,
     )
 
-    vectorstore = Chroma(collection_name="hypothetical_queries", embedding_function=embedding)
+    vectorstore = Chroma(
+        collection_name="hypothetical_queries", embedding_function=embedding
+    )
 
     store = InMemoryByteStore()
     id_key = "doc_id"
@@ -160,13 +161,16 @@ def retriever_with_hypothetical_queries(hypothetical_queries, config: LangChainO
     question_docs = []
     for i, question_list in enumerate(hypothetical_queries):
         question_docs.extend(
-            [Document(page_content=s, metadata={id_key: doc_ids[i]}) for s in question_list]
+            [
+                Document(page_content=s, metadata={id_key: doc_ids[i]})
+                for s in question_list
+            ]
         )
-
 
     retriever.vectorstore.add_documents(question_docs)
     retriever.docstore.mset(list(zip(doc_ids, docs)))
     return retriever
+
 
 if __name__ == "__main__":
     config = LangChainOption()
@@ -177,7 +181,7 @@ if __name__ == "__main__":
     # summaries = summaries(docs, config)
     # retriever = retriever_with_summaries(summaries, config)
     # print(retriever.vectorstore.similarity_search("justice breyer")[0])
-    
+
     hypo_questions = hypothetical_queries(docs, config)
     retriever = retriever_with_hypothetical_queries(hypo_questions, config)
     print(retriever.vectorstore.similarity_search("justice breyer")[0])
