@@ -1,12 +1,12 @@
 import asyncio
 
+from operator import itemgetter
 from langchain.chat_models import init_chat_model
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage
 
@@ -97,6 +97,43 @@ async def bind_tools(config: LangChainOption):
     print(result)
 
 
-if __name__ == "__main__":
-    result = calculate("What is 3 * 12? Also, what is 11 + 49?", LangChainOption())
+def length_function(text):
+    return len(text)
+
+
+def _multiple_length_function(text1, text2):
+    return len(text1) * len(text2)
+
+
+def multiple_length_function(_dict):
+    return _multiple_length_function(_dict["text1"], _dict["text2"])
+
+
+async def calculate_length(config: LangChainOption):
+    model = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    prompt = ChatPromptTemplate.from_template("what is {a} + {b}")
+
+    # itemgetter("foo") === lambda d: d["foo"]
+    chain = (
+        {
+            "a": itemgetter("foo") | RunnableLambda(length_function),
+            "b": {"text1": itemgetter("foo"), "text2": itemgetter("bar")}
+            | RunnableLambda(multiple_length_function),
+        }
+        | prompt
+        | model
+    )
+
+    result = await chain.ainvoke({"foo": "bar", "bar": "gah"})
+
     print(result)
+
+
+if __name__ == "__main__":
+    # result = calculate("What is 3 * 12? Also, what is 11 + 49?", LangChainOption())
+    # print(result)
+    asyncio.run(calculate_length(LangChainOption()))
