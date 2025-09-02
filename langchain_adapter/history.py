@@ -2,6 +2,7 @@ from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.runnables import ConfigurableFieldSpec
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
 from typing import Optional
@@ -25,10 +26,10 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    if session_id not in store:
-        store[session_id] = ChatMessageHistory()
-    return store[session_id]
+def get_session_history(user_id: str, conversation_id: str) -> BaseChatMessageHistory:
+    if (user_id, conversation_id) not in store:
+        store[(user_id, conversation_id)] = ChatMessageHistory()
+    return store[(user_id, conversation_id)]
 
 
 def get_runnable(config: LangChainOption):
@@ -44,6 +45,24 @@ def get_runnable(config: LangChainOption):
         get_session_history,
         input_messages_key="input",
         history_messages_key="history",
+        history_factory_config=[
+            ConfigurableFieldSpec(
+                id="user_id",
+                annotation=str,
+                name="user id",
+                description="user id",
+                default="",
+                is_shared=True,
+            ),
+            ConfigurableFieldSpec(
+                id="conversation_id",
+                annotation=str,
+                name="conversation id",
+                description="conversation id",
+                default="",
+                is_shared=True,
+            ),
+        ],
     )
 
 
@@ -51,18 +70,18 @@ if __name__ == "__main__":
     runnable = get_runnable(LangChainOption())
     result = runnable.invoke(
         {"ability": "Mathematics", "input": "What does the cosine function mean?"},
-        config={"configurable": {"session_id": "abc123"}},
+        config={"configurable": {"user_id": "abc123", "conversation_id": "1"}},
     )
     print(1, result.content)
 
     result = runnable.invoke(
         {"ability": "Mathematics", "input": "What"},
-        config={"configurable": {"session_id": "abc123"}},
+        config={"configurable": {"user_id": "abc123", "conversation_id": "1"}},
     )
     print(2, result.content)
 
     result = runnable.invoke(
         {"ability": "Mathematics", "input": "What"},
-        config={"configurable": {"session_id": "abc9999"}},
+        config={"configurable": {"user_id": "abc9999", "conversation_id": "2"}},
     )
     print(3, result.content)
