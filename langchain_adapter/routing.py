@@ -1,9 +1,13 @@
 from langchain.chat_models import init_chat_model
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import (
+    PromptTemplate,
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+)
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.runnables import RunnableBranch
+from langchain_core.runnables import RunnableBranch, RunnableLambda
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
 from typing import Optional
@@ -73,7 +77,18 @@ def get_full_chain(config: LangChainOption):
         general_chain,
     )
 
-    full_chain = {"topic": chain, "question": lambda x: x["question"]} | branch
+    def route(info):
+        if "gemini" in info["topic"].lower():
+            return gemini_chain
+        elif "langchain" in info["topic"].lower():
+            return langchain_chain
+        else:
+            return general_chain
+
+    # full_chain = {"topic": chain, "question": lambda x: x["question"]} | branch
+    full_chain = {"topic": chain, "question": lambda x: x["question"]} | RunnableLambda(
+        route
+    )
 
     return full_chain
 
