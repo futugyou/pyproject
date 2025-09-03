@@ -1,7 +1,13 @@
-from langchain.prompts import PromptTemplate, StringPromptTemplate
 from langchain.chains import LLMChain
 from langchain.chat_models import init_chat_model
+from langchain.prompts import (
+    PromptTemplate,
+    StringPromptTemplate,
+    FewShotPromptTemplate,
+)
+from langchain.prompts.example_selector import LengthBasedExampleSelector
 from langchain.prompts.example_selector.base import BaseExampleSelector
+
 
 from typing import Dict, List
 import numpy as np
@@ -33,6 +39,39 @@ def custom_selector(config: LangChainOption):
     print(selector.examples)
 
     print(selector.select_examples({"foo": "foo"}))
+
+    examples = [
+        {"input": "happy", "output": "sad"},
+        {"input": "tall", "output": "short"},
+        {"input": "energetic", "output": "lethargic"},
+        {"input": "sunny", "output": "gloomy"},
+        {"input": "windy", "output": "calm"},
+    ]
+
+    example_prompt = PromptTemplate(
+        input_variables=["input", "output"],
+        template="Input: {input}\nOutput: {output}",
+    )
+    example_selector = LengthBasedExampleSelector(
+        examples=examples,
+        example_prompt=example_prompt,
+        max_length=25,
+    )
+    dynamic_prompt = FewShotPromptTemplate(
+        example_selector=example_selector,
+        example_prompt=example_prompt,
+        prefix="Give the antonym of every input",
+        suffix="Input: {adjective}\nOutput:",
+        input_variables=["adjective"],
+    )
+    print(dynamic_prompt.format(adjective="big"))
+
+    long_string = "big and huge and massive and large and gigantic and tall and much much much much much bigger than everything else"
+    print(dynamic_prompt.format(adjective=long_string))
+
+    new_example = {"input": "big", "output": "small"}
+    dynamic_prompt.example_selector.add_example(new_example)
+    print(dynamic_prompt.format(adjective="enthusiastic"))
 
 
 if __name__ == "__main__":
