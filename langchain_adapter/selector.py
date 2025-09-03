@@ -1,6 +1,7 @@
 from langchain.chains import LLMChain
 from langchain.chat_models import init_chat_model
 from langchain_community.vectorstores import FAISS
+from langchain_community.example_selectors.ngram_overlap import NGramOverlapExampleSelector
 from langchain.prompts import (
     PromptTemplate,
     StringPromptTemplate,
@@ -47,19 +48,21 @@ def custom_selector(config: LangChainOption):
     print(selector.select_examples({"foo": "foo"}))
 
 
-def length_selector(config: LangChainOption):
-    examples = [
-        {"input": "happy", "output": "sad"},
-        {"input": "tall", "output": "short"},
-        {"input": "energetic", "output": "lethargic"},
-        {"input": "sunny", "output": "gloomy"},
-        {"input": "windy", "output": "calm"},
-    ]
+examples = [
+    {"input": "happy", "output": "sad"},
+    {"input": "tall", "output": "short"},
+    {"input": "energetic", "output": "lethargic"},
+    {"input": "sunny", "output": "gloomy"},
+    {"input": "windy", "output": "calm"},
+]
 
-    example_prompt = PromptTemplate(
-        input_variables=["input", "output"],
-        template="Input: {input}\nOutput: {output}",
-    )
+example_prompt = PromptTemplate(
+    input_variables=["input", "output"],
+    template="Input: {input}\nOutput: {output}",
+)
+
+
+def length_selector(config: LangChainOption):
     example_selector = LengthBasedExampleSelector(
         examples=examples,
         example_prompt=example_prompt,
@@ -87,19 +90,6 @@ def mmr_selector(config: LangChainOption):
         model=config.lang_google_embedding_model,
         google_api_key=config.lang_google_api_key,
     )
-    example_prompt = PromptTemplate(
-        input_variables=["input", "output"],
-        template="Input: {input}\nOutput: {output}",
-    )
-
-    examples = [
-        {"input": "happy", "output": "sad"},
-        {"input": "tall", "output": "short"},
-        {"input": "energetic", "output": "lethargic"},
-        {"input": "sunny", "output": "gloomy"},
-        {"input": "windy", "output": "calm"},
-    ]
-
     # example_selector = MaxMarginalRelevanceExampleSelector.from_examples(
     example_selector = SemanticSimilarityExampleSelector.from_examples(
         examples,
@@ -117,7 +107,36 @@ def mmr_selector(config: LangChainOption):
     print(mmr_prompt.format(adjective="worried"))
 
 
+def ngram_overlap_selector(config: LangChainOption):
+    examples = [
+        {"input": "See Spot run.", "output": "Ver correr a Spot."},
+        {"input": "My dog barks.", "output": "Mi perro ladra."},
+        {"input": "Spot can run.", "output": "Spot puede correr."},
+    ]
+    example_selector = NGramOverlapExampleSelector(
+        examples=examples,
+        example_prompt=example_prompt,
+        threshold=-1.0,
+    )
+    dynamic_prompt = FewShotPromptTemplate(
+        example_selector=example_selector,
+        example_prompt=example_prompt,
+        prefix="Give the Spanish translation of every input",
+        suffix="Input: {sentence}\nOutput:",
+        input_variables=["sentence"],
+    )
+    print(dynamic_prompt.format(sentence="Spot can run fast."))
+
+    new_example = {"input": "Spot plays fetch.", "output": "Spot juega a buscar."}
+    example_selector.add_example(new_example)
+    print(dynamic_prompt.format(sentence="Spot can run fast."))
+
+    example_selector.threshold = 0.0
+    print(dynamic_prompt.format(sentence="Spot can run fast."))
+
+
 if __name__ == "__main__":
     # custom_selector(LangChainOption())
     # length_selector(LangChainOption())
-    mmr_selector(LangChainOption())
+    # mmr_selector(LangChainOption())
+    ngram_overlap_selector(LangChainOption())
