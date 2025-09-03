@@ -27,7 +27,7 @@ def use_duckducksreach(input_text: str, config: LangChainOption):
 
 
 if __name__ == "__main__":
-    # duckduckgo_search.exceptions.DuckDuckGoSearchException: 
+    # duckduckgo_search.exceptions.DuckDuckGoSearchException:
     # duckduck return 302....
     result = use_duckducksreach(
         "I'm trying to figure out what games are playing tonight.", LangChainOption()

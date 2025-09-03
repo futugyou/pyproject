@@ -194,3 +194,5 @@ cython_debug/
 .cursorindexingignore
 public_opinion_monitoring/tmp
 public_opinion_monitoring/md_files
+
+langchain_adapter/feast_repo/*
