@@ -144,14 +144,14 @@ if __name__ == "__main__":
         final_chain, memory = await retrieval_with_memory(LangChainOption())
         inputs = {"question": "where did harrison work?"}
         result = final_chain.invoke(inputs)
-        print(result)
+        print(result["answer"].content)
 
         memory.save_context(inputs, {"answer": result["answer"].content})
         memory.load_memory_variables({})
 
         inputs = {"question": "but where did he really work?"}
         result = final_chain.invoke(inputs)
-        print(result)
+        print(result["answer"].content)
 
     # asyncio.run(retrieval_passthrough(LangChainOption()))
     asyncio.run(run())
