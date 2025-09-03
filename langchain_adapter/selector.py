@@ -1,7 +1,9 @@
 from langchain.chains import LLMChain
 from langchain.chat_models import init_chat_model
-from langchain_community.vectorstores import FAISS
-from langchain_community.example_selectors.ngram_overlap import NGramOverlapExampleSelector
+from langchain_community.vectorstores import FAISS, Chroma
+from langchain_community.example_selectors.ngram_overlap import (
+    NGramOverlapExampleSelector,
+)
 from langchain.prompts import (
     PromptTemplate,
     StringPromptTemplate,
@@ -11,6 +13,7 @@ from langchain.prompts.example_selector import (
     MaxMarginalRelevanceExampleSelector,
     SemanticSimilarityExampleSelector,
     LengthBasedExampleSelector,
+    SemanticSimilarityExampleSelector,
 )
 from langchain.prompts.example_selector.base import BaseExampleSelector
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -135,8 +138,27 @@ def ngram_overlap_selector(config: LangChainOption):
     print(dynamic_prompt.format(sentence="Spot can run fast."))
 
 
+def semantic_selector(config: LangChainOption):
+    embedding = GoogleGenerativeAIEmbeddings(
+        model=config.lang_google_embedding_model,
+        google_api_key=config.lang_google_api_key,
+    )
+    example_selector = SemanticSimilarityExampleSelector.from_examples(
+        examples, embedding, Chroma, k=1
+    )
+    similar_prompt = FewShotPromptTemplate(
+        example_selector=example_selector,
+        example_prompt=example_prompt,
+        prefix="Give the antonym of every input",
+        suffix="Input: {adjective}\nOutput:",
+        input_variables=["adjective"],
+    )
+    print(similar_prompt.format(adjective="worried"))
+
+
 if __name__ == "__main__":
     # custom_selector(LangChainOption())
     # length_selector(LangChainOption())
     # mmr_selector(LangChainOption())
-    ngram_overlap_selector(LangChainOption())
+    # ngram_overlap_selector(LangChainOption())
+    semantic_selector(LangChainOption())
