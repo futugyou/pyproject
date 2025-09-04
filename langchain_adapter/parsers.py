@@ -1,5 +1,6 @@
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import CommaSeparatedListOutputParser
+from langchain.output_parsers import DatetimeOutputParser
 from langchain.prompts import (
     PromptTemplate,
     ChatPromptTemplate,
@@ -26,10 +27,34 @@ def list_parser(input_text: str, config: LangChainOption):
     )
     _input = prompt.format(subject=input_text)
     output = model.invoke(_input)
-    
+
     print(output_parser.parse(output.content))
+
+
+def list_datetime(input_text: str, config: LangChainOption):
+    model = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    output_parser = DatetimeOutputParser()
+    template = """Answer the users question:
+
+    {question}
+
+    {format_instructions}"""
+    prompt = PromptTemplate.from_template(
+        template,
+        partial_variables={
+            "format_instructions": output_parser.get_format_instructions()
+        },
+    )
+    chain = prompt | model | output_parser
+    result = chain.invoke({"question": input_text})
+    print(result)
 
 
 if __name__ == "__main__":
     config = LangChainOption()
-    list_parser("ice cream flavors", config)
+    # list_parser("ice cream flavors", config)
+    list_datetime("around when was bitcoin founded?", config)
