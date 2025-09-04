@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from scalar_fastapi import get_scalar_api_reference
+
 from app.api.v1 import router as v1_router
 from mcp_adapter.server import create_mcp_server
 from app.mcp_openapi_merge import build_mcp_openapi_dict, merge_openapi_into_app
@@ -52,6 +54,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/scalar", include_in_schema=False)
+async def scalar_html():
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title="scalar doc"
+    )
+
 
 for mcp in mcp_servers:
     app.mount(mcp.prefix, mcp.mcp_app, mcp.name)
