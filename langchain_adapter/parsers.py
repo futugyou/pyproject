@@ -6,6 +6,8 @@ from langchain.output_parsers import (
     OutputFixingParser,
     RetryOutputParser,
     RetryWithErrorOutputParser,
+    StructuredOutputParser,
+    ResponseSchema,
 )
 from langchain.output_parsers.enum import EnumOutputParser
 from langchain.prompts import (
@@ -153,10 +155,48 @@ def retry_parser(input_text: str, config: LangChainOption):
     )
 
 
+def structured_parser(input_text: str, config: LangChainOption):
+    response_schemas = [
+        ResponseSchema(name="answer", description="answer to the user's question"),
+        ResponseSchema(
+            name="source",
+            description="source used to answer the user's question, should be a website.",
+        ),
+    ]
+    output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+
+    format_instructions = output_parser.get_format_instructions()
+    prompt = PromptTemplate(
+        template="answer the users question as best as possible.\n{format_instructions}\n{question}",
+        input_variables=["question"],
+        partial_variables={"format_instructions": format_instructions},
+    )
+
+    model = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    output_parser = PydanticOutputParser(pydantic_object=Action)
+
+    prompt = PromptTemplate(
+        template="Answer the user query.\n{format_instructions}\n{query}\n",
+        input_variables=["query"],
+        partial_variables={
+            "format_instructions": output_parser.get_format_instructions()
+        },
+    )
+
+    chain = prompt | model | output_parser
+    result = chain.invoke({"query": input_text})
+    print(result)
+
+
 if __name__ == "__main__":
     config = LangChainOption()
     # list_parser("ice cream flavors", config)
     # datetime_parser("around when was bitcoin founded?", config)
     # enum_parser()
     # pydantic_parser("Tell me a joke.", config)
-    retry_parser("who is leo di caprios gf?", config)
+    # retry_parser("who is leo di caprios gf?", config)
+    structured_parser("what is the population of france?", config)
