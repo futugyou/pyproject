@@ -1,6 +1,12 @@
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import CommaSeparatedListOutputParser
-from langchain.output_parsers import DatetimeOutputParser, PydanticOutputParser
+from langchain.output_parsers import (
+    DatetimeOutputParser,
+    PydanticOutputParser,
+    OutputFixingParser,
+    RetryOutputParser,
+    RetryWithErrorOutputParser,
+)
 from langchain.output_parsers.enum import EnumOutputParser
 from langchain.prompts import (
     PromptTemplate,
@@ -107,9 +113,50 @@ def pydantic_parser(input_text: str, config: LangChainOption):
     print(result)
 
 
+class Action(BaseModel):
+    action: str = Field(description="action to take")
+    action_input: str = Field(description="input to the action")
+
+
+def retry_parser(input_text: str, config: LangChainOption):
+    model = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    output_parser = PydanticOutputParser(pydantic_object=Action)
+
+    prompt = PromptTemplate(
+        template="Answer the user query.\n{format_instructions}\n{query}\n",
+        input_variables=["query"],
+        partial_variables={
+            "format_instructions": output_parser.get_format_instructions()
+        },
+    )
+
+    # chain = prompt | model | output_parser
+    # result = chain.invoke({"query": input_text})
+    # print(result)
+
+    bad_response = '{"action": "search"}'
+    # Field required [type=missing, input_value={'action': 'search'}, input_type=dict]
+    # output_parser.parse(bad_response)
+
+    fix_parser = OutputFixingParser.from_llm(parser=output_parser, llm=model)
+    print(fix_parser.parse(bad_response))
+
+    retry_parser = RetryWithErrorOutputParser.from_llm(parser=output_parser, llm=model)
+    print(
+        retry_parser.parse_with_prompt(
+            bad_response, prompt.format_prompt(query="who is leo di caprios gf?")
+        )
+    )
+
+
 if __name__ == "__main__":
     config = LangChainOption()
     # list_parser("ice cream flavors", config)
     # datetime_parser("around when was bitcoin founded?", config)
     # enum_parser()
-    pydantic_parser("Tell me a joke.", config)
+    # pydantic_parser("Tell me a joke.", config)
+    retry_parser("who is leo di caprios gf?", config)
