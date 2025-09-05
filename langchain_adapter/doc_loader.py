@@ -9,6 +9,7 @@ from langchain_community.document_loaders import (
     UnstructuredHTMLLoader,
     JSONLoader,
     UnstructuredMarkdownLoader,
+    BiliBiliLoader,
 )
 
 from .option import LangChainOption
@@ -86,6 +87,17 @@ def mark():
     doc_sources = [doc.metadata["source"] for doc in docs]
     print(doc_sources)
 
+def bili():
+    # ModuleNotFoundError: No module named 'Cryptodome'
+    # ImportError: requests package not found, please install it with `pip install bilibili-api-python`
+    # Still not working after installing
+    loader = BiliBiliLoader(["https://www.bilibili.com/video/BV1xt411o7Xu/"])
+
+    docs = loader.load()
+    print(docs)
+    doc_sources = [doc.metadata["source"] for doc in docs]
+    print(doc_sources)
+
 
 if __name__ == "__main__":
     config = LangChainOption()
@@ -94,4 +106,5 @@ if __name__ == "__main__":
     # dir()
     # html()
     # json()
-    mark()
+    # mark()
+    bili()
