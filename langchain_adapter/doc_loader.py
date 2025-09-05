@@ -1,4 +1,6 @@
-from langchain_community.document_loaders import CSVLoader, DirectoryLoader, TextLoader, PythonLoader
+
+import requests
+from langchain_community.document_loaders import CSVLoader, DirectoryLoader, TextLoader, PythonLoader, UnstructuredURLLoader,BSHTMLLoader,UnstructuredHTMLLoader
 
 from .option import LangChainOption
 
@@ -23,8 +25,28 @@ def dir():
     doc_sources = [doc.metadata['source']  for doc in docs]
     print(doc_sources)
 
+
+def html():
+    url = "https://learn.microsoft.com/zh-cn/azure/architecture/ai-ml/#ai-concepts"
+    response = requests.get(url)
+
+    response.encoding = "utf-8"
+    html_text = response.text
+
+    with open("./langchain_adapter/files/temp.html", "w", encoding="utf-8") as f:
+        f.write(html_text)
+
+    loader = UnstructuredHTMLLoader("./langchain_adapter/files/temp.html")
+    # loader = BSHTMLLoader("./langchain_adapter/files/temp.html")
+    # loader = UnstructuredURLLoader(urls=[url])
+    docs = loader.load()
+    print(docs)
+    doc_sources = [doc.metadata['source']  for doc in docs]
+    print(doc_sources)
+
 if __name__ == "__main__":
     config = LangChainOption()
     
     # csv()
-    dir()
+    # dir()
+    html()

@@ -16,4 +16,5 @@ dependencies = [
     "langgraph>=0.6.6",
     "nltk>=3.9.1",
     "pydantic-settings>=2.10.1",
+    "unstructured>=0.18.14",
 ]
