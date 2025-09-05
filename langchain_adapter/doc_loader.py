@@ -1,4 +1,4 @@
-from langchain_community.document_loaders import CSVLoader
+from langchain_community.document_loaders import CSVLoader, DirectoryLoader, TextLoader, PythonLoader
 
 from .option import LangChainOption
 
@@ -11,7 +11,20 @@ def csv():
     data = loader.load()
     print(data)
 
+
+def dir():
+    # text_loader_kwargs={'autodetect_encoding': True}
+    # loader = DirectoryLoader("", glob="**/*.py", loader_cls=TextLoader, loader_kwargs=text_loader_kwargs)
+    
+    
+    loader = DirectoryLoader("./mcp_adapter", glob="**/*.py", loader_cls=PythonLoader)
+    docs = loader.load()
+    # print(docs)
+    doc_sources = [doc.metadata['source']  for doc in docs]
+    print(doc_sources)
+
 if __name__ == "__main__":
     config = LangChainOption()
     
-    csv()
+    # csv()
+    dir()
