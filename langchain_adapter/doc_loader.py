@@ -87,6 +87,7 @@ def mark():
     doc_sources = [doc.metadata["source"] for doc in docs]
     print(doc_sources)
 
+
 def bili():
     # ModuleNotFoundError: No module named 'Cryptodome'
     # ImportError: requests package not found, please install it with `pip install bilibili-api-python`
