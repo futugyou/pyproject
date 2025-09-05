@@ -8,6 +8,7 @@ from langchain_community.document_loaders import (
     BSHTMLLoader,
     UnstructuredHTMLLoader,
     JSONLoader,
+    UnstructuredMarkdownLoader,
 )
 
 from .option import LangChainOption
@@ -77,10 +78,20 @@ def json():
     print(doc_sources)
 
 
+def mark():
+    loader = UnstructuredMarkdownLoader("README.md")
+
+    docs = loader.load()
+    print(docs)
+    doc_sources = [doc.metadata["source"] for doc in docs]
+    print(doc_sources)
+
+
 if __name__ == "__main__":
     config = LangChainOption()
 
     # csv()
     # dir()
     # html()
-    json()
+    # json()
+    mark()
