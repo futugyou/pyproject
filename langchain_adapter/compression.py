@@ -1,10 +1,11 @@
 from langchain.chat_models import init_chat_model
+from langchain.indexes import VectorstoreIndexCreator
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS, Chroma
 from langchain_text_splitters import CharacterTextSplitter
 
 
@@ -48,10 +49,29 @@ def contextual_compression(question: str, retriever, config: LangChainOption):
     return compression_retriever.invoke(question)
 
 
+def retrieval_qa(query: str, config: LangChainOption):
+    embedding = GoogleGenerativeAIEmbeddings(
+        model=config.lang_google_embedding_model,
+        google_api_key=config.lang_google_api_key,
+    )
+
+    llm = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+    loader = TextLoader("./langchain_adapter/state_of_the_union.txt")
+    index = VectorstoreIndexCreator(embedding=embedding).from_loaders([loader])
+    return index.query(query, llm=llm)
+
+
 if __name__ == "__main__":
     config = LangChainOption()
-    retriever = get_retriever(config)
-    doc = contextual_compression(
-        "What did the president say about Ketanji Jackson Brown", retriever, config
-    )
-    pretty_print_docs(doc)
+    # retriever = get_retriever(config)
+    # doc = contextual_compression(
+    #     "What did the president say about Ketanji Jackson Brown", retriever, config
+    # )
+    # pretty_print_docs(doc)
+
+    query = "What did the president say about Ketanji Brown Jackson"
+    print(retrieval_qa(query, config))
