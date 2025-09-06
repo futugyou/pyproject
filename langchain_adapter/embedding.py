@@ -1,5 +1,10 @@
+import faiss
+
+from datetime import datetime, timedelta
 from langchain.schema import Document
+from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain.chat_models import init_chat_model
+from langchain.retrievers import TimeWeightedVectorStoreRetriever
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
@@ -185,6 +190,33 @@ def self_querying_retriever(question: str, config: LangChainOption):
     return retriever.invoke(question)
 
 
+def time_weighted_vectorstore(question: str, config: LangChainOption):
+    embeddings_model = GoogleGenerativeAIEmbeddings(
+        model=config.lang_google_embedding_model,
+        google_api_key=config.lang_google_api_key,
+    )
+
+    llm = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+
+    embedding_size = 3072
+
+    index = faiss.IndexFlatL2(embedding_size)
+    vectorstore = FAISS(embeddings_model.embed_query, index, InMemoryDocstore({}), {})
+    retriever = TimeWeightedVectorStoreRetriever(
+        vectorstore=vectorstore, decay_rate=0.0000000000000000000000001, k=1
+    )
+    yesterday = datetime.now() - timedelta(days=1)
+    retriever.add_documents(
+        [Document(page_content="hello world", metadata={"last_accessed_at": yesterday})]
+    )
+    retriever.add_documents([Document(page_content="hello foo")])
+    return retriever.invoke(question)
+
+
 if __name__ == "__main__":
     config = LangChainOption()
     # result = generate_embedding(
@@ -209,5 +241,8 @@ if __name__ == "__main__":
     # doc = multi_query_retriever_with_output("What is ai-concepts?", vectordb, config)
     # print(doc)
 
-    result = self_querying_retriever("What are some movies about dinosaurs", config)
+    # result = self_querying_retriever("What are some movies about dinosaurs", config)
+    # print(result)
+
+    result = time_weighted_vectorstore("hello world", config)
     print(result)
