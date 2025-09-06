@@ -1,4 +1,5 @@
 from langchain.chat_models import init_chat_model
+from langchain.chains import RetrievalQA
 from langchain.indexes import VectorstoreIndexCreator
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
@@ -65,6 +66,28 @@ def retrieval_qa(query: str, config: LangChainOption):
     return index.query(query, llm=llm)
 
 
+def retrieval_qa2(query: str, config: LangChainOption):
+    embedding = GoogleGenerativeAIEmbeddings(
+        model=config.lang_google_embedding_model,
+        google_api_key=config.lang_google_api_key,
+    )
+
+    llm = init_chat_model(
+        config.lang_google_chat_model,
+        model_provider="google_genai",
+        api_key=config.lang_google_api_key,
+    )
+
+    documents = TextLoader("./langchain_adapter/state_of_the_union.txt").load()
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    texts = text_splitter.split_documents(documents)
+    db = Chroma.from_documents(texts, embedding)
+    retriever = db.as_retriever()
+
+    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
+    return qa.run(query)
+
+
 if __name__ == "__main__":
     config = LangChainOption()
     # retriever = get_retriever(config)
@@ -74,4 +97,4 @@ if __name__ == "__main__":
     # pretty_print_docs(doc)
 
     query = "What did the president say about Ketanji Brown Jackson"
-    print(retrieval_qa(query, config))
+    print(retrieval_qa2(query, config))
