@@ -1,8 +1,10 @@
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.load import dumpd, dumps, load, loads
 
 from typing import Optional
 from pydantic import BaseModel, Field
+import json
 
 from .option import LangChainOption
 
@@ -28,30 +30,34 @@ class Joke(BaseModel):
     )
 
 
-def generate_joke(input_text: str, config: LangChainOption) -> Joke:
+def get_chain(config: LangChainOption):
     llm = init_chat_model(
         config.lang_google_chat_model,
         model_provider="google_genai",
         api_key=config.lang_google_api_key,
     )
     structured_llm = llm.with_structured_output(Joke)
-    few_shot_structured_llm = prompt | structured_llm
-    return few_shot_structured_llm.invoke(input_text)
+    return prompt | structured_llm
 
 
-def generate_joke_stream(input_text: str, config: LangChainOption):
-    llm = init_chat_model(
-        config.lang_google_chat_model,
-        model_provider="google_genai",
-        api_key=config.lang_google_api_key,
-    )
-    structured_llm = llm.with_structured_output(Joke)
-    few_shot_structured_llm = prompt | structured_llm
-    for chunk in few_shot_structured_llm.stream(input_text):
+def generate_joke(input_text: str, chain) -> Joke:
+    return chain.invoke(input_text)
+
+
+def generate_joke_stream(input_text: str, chain):
+    for chunk in chain.stream(input_text):
         print(chunk.punchline, end="|", flush=True)
 
 
+def save_chain(chain):
+    string_representation = dumps(chain, pretty=True)
+    with open("./langchain_adapter/files/save_chat.json", "w") as fp:
+        json.dump(string_representation, fp)
+
+
 if __name__ == "__main__":
-    # result = generate_joke("Tell me a joke about cats", LangChainOption())
+    chain = get_chain(LangChainOption())
+    # result = generate_joke("Tell me a joke about cats", chain)
     # print(result)
-    generate_joke_stream("Tell me a joke about cats", LangChainOption())
+    # generate_joke_stream("Tell me a joke about cats", chain)
+    save_chain(chain)
