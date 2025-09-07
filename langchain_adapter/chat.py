@@ -55,9 +55,25 @@ def save_chain(chain):
         json.dump(string_representation, fp)
 
 
+def load_chain(path, query, config: LangChainOption):
+    # NotImplementedError: Trying to load an object that doesn't implement serialization: 
+    # {'lc': 1, 'type': 'not_implemented', 'id': ['langchain_core', 'output_parsers', 'openai_tools', 'PydanticToolsParser'], 
+    # 'repr': "PydanticToolsParser(first_tool_only=True, tools=[<class '__main__.Joke'>])", 'name': 'PydanticToolsParser'}
+    with open(path, "r") as fp:
+        chain = loads(
+            json.load(fp), secrets_map={"GOOGLE_API_KEY": config.lang_google_api_key}
+        )
+        result = generate_joke(query, chain)
+        print(result)
+
+
 if __name__ == "__main__":
-    chain = get_chain(LangChainOption())
+    config = LangChainOption()
+    chain = get_chain(config)
     # result = generate_joke("Tell me a joke about cats", chain)
     # print(result)
     # generate_joke_stream("Tell me a joke about cats", chain)
-    save_chain(chain)
+    # save_chain(chain)
+    load_chain(
+        "./langchain_adapter/files/save_chat.json", "Tell me a joke about cats", config
+    )
