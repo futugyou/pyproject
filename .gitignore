@@ -197,3 +197,4 @@ public_opinion_monitoring/md_files
 
 langchain_adapter/feast_repo/*
 langchain_adapter/files/*
+.vercel

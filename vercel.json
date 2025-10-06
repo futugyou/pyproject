@@ -1,15 +1,9 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "api/index.py",
-            "use": "@vercel/python"
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "functions": {
+        "api/**/*.py": {
+            "excludeFiles": "{a2a_samples/**,autogen_demo/**,**/*.test.py,**/test_*.py,google_colab/**,oauth_client/**,public_opinion_monitoring/**,sample-data/**,static/**,assets/**}"
         }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "api/index.py"
-        }
-    ]
+    },
+    "version": 2
 }
