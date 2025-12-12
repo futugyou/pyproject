@@ -7,7 +7,7 @@ Write a project in Python
 ```
 pip install uv
 uv init 
-pip add dotenv fastapi motor "semantic-kernel[google]" uvicorn mcp
+uv add dotenv fastapi motor "semantic-kernel[google]" uvicorn mcp
 ```
 
 ## Structure
