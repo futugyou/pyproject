@@ -1,17 +1,18 @@
-import asyncio
+
+import sys
 import os
-from dotenv import load_dotenv
+current_file_path = os.path.abspath(__file__)
+project_root = os.path.dirname(os.path.dirname(current_file_path))
+sys.path.insert(0, project_root)
+
+import asyncio
 from agent_framework.openai import OpenAIChatClient
 
-load_dotenv()
+from agent_adapter  import client_factory
 
 
 async def JokeAgent(query: str) -> str:
-    client = OpenAIChatClient(
-        model_id=os.getenv("GOOGLE_CHAT_MODEL_ID"),
-        base_url=os.getenv("GOOGLE_URL"),
-        api_key=os.getenv("GOOGLE_API_KEY"),
-    )
+    client = client_factory.build_client("openai")
 
     agent = client.create_agent(
         instructions="You are good at telling jokes.", name="Joker"
