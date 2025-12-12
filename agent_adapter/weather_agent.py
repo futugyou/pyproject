@@ -9,13 +9,16 @@ import asyncio
 from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory
+from agent_adapter.tools.weather import get_weather
 
 
-async def JokeAgent(query: str) -> str:
+async def WeatherAgent(query: str) -> str:
     client = client_factory.build_client("openai")
 
     agent = client.create_agent(
-        instructions="You are good at telling jokes.", name="Joker"
+        instructions="You are a helpful weather assistant",
+        name="weather",
+        tools=get_weather,
     )
 
     result = await agent.run(query)
@@ -25,4 +28,4 @@ async def JokeAgent(query: str) -> str:
 
 
 if __name__ == "__main__":
-    asyncio.run(JokeAgent("Tell me a joke about a pirate."))
+    asyncio.run(WeatherAgent("What is the weather like in Amsterdam?"))
