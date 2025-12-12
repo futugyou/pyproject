@@ -2,7 +2,7 @@
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "functions": {
         "api/**/*.py": {
-            "excludeFiles": "{a2a_samples/**,autogen_demo/**,**/*.test.py,**/test_*.py,google_colab/**,oauth_client/**,public_opinion_monitoring/**,sample-data/**,static/**,assets/**}"
+            "excludeFiles": "{agent_adapter/**,a2a_samples/**,autogen_demo/**,**/*.test.py,**/test_*.py,google_colab/**,oauth_client/**,public_opinion_monitoring/**,sample-data/**,static/**,assets/**}"
         }
     },
     "version": 2

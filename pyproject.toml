@@ -24,4 +24,5 @@ members = [
     "mcp_adapter",
     "semantic_kernel_adapter",
     "langchain_adapter",
+    "agent_adapter",
 ]
