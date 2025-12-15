@@ -56,8 +56,8 @@ def save_chain(chain):
 
 
 def load_chain(path, query, config: LangChainOption):
-    # NotImplementedError: Trying to load an object that doesn't implement serialization: 
-    # {'lc': 1, 'type': 'not_implemented', 'id': ['langchain_core', 'output_parsers', 'openai_tools', 'PydanticToolsParser'], 
+    # NotImplementedError: Trying to load an object that doesn't implement serialization:
+    # {'lc': 1, 'type': 'not_implemented', 'id': ['langchain_core', 'output_parsers', 'openai_tools', 'PydanticToolsParser'],
     # 'repr': "PydanticToolsParser(first_tool_only=True, tools=[<class '__main__.Joke'>])", 'name': 'PydanticToolsParser'}
     with open(path, "r") as fp:
         chain = loads(

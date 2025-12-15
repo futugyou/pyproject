@@ -12,7 +12,7 @@ from agent_adapter import client_factory
 from agent_adapter.tools.weather import get_weather
 
 
-async def WeatherAgent(query: str) -> str:
+def get_weather_agent() -> ChatAgent:
     client = client_factory.build_client("openai")
 
     agent = client.create_agent(
@@ -20,7 +20,13 @@ async def WeatherAgent(query: str) -> str:
         name="weather",
         tools=get_weather,
     )
+    return agent
 
+
+agent = get_weather_agent()
+
+
+async def run(query: str) -> str:
     result = await agent.run(query)
     text = result.text
     print(f"message: {text}")
@@ -28,4 +34,4 @@ async def WeatherAgent(query: str) -> str:
 
 
 if __name__ == "__main__":
-    asyncio.run(WeatherAgent("What is the weather like in Amsterdam?"))
+    asyncio.run(run("What is the weather like in Amsterdam?"))
