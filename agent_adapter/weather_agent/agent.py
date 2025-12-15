@@ -1,11 +1,13 @@
+from pathlib import Path
 import sys
-import os
 
-current_file_path = os.path.abspath(__file__)
-project_root = os.path.dirname(os.path.dirname(current_file_path))
-sys.path.insert(0, project_root)
+current_file_path = Path(__file__).resolve()
+project_root = current_file_path.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 
 import asyncio
+from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory

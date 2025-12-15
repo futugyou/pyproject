@@ -34,6 +34,8 @@ uv sync --all-packages --upgrade
 uv run uvicorn app.main:app --reload
 uv run -m mcp_adapter.server or uv run -m mcp_adapter.main
 uv run -m mcp_adapter.client
+
+devui ./agent_adapter
 ```
 
 ## Other

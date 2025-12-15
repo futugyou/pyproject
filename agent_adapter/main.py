@@ -1,13 +1,14 @@
+from pathlib import Path
 import sys
-import os
 
-current_file_path = os.path.abspath(__file__)
-project_root = os.path.dirname(os.path.dirname(current_file_path))
-sys.path.insert(0, project_root)
+current_file_path = Path(__file__).resolve()
+project_root = current_file_path.parent.parent
+sys.path.insert(0, str(project_root))
+
 
 from agent_framework.devui import serve
-from agent_adapter.weather_agent import agent as weather_agent
-from agent_adapter.joke_agent import agent as joke_agent
+from agent_adapter.weather_agent.agent import agent as weather_agent
+from agent_adapter.joke_agent.agent import agent as joke_agent
 
 
 def main():
