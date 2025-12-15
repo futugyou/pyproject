@@ -1,3 +1,11 @@
+
+import sys
+import os
+
+current_file_path = os.path.abspath(__file__)
+project_root = os.path.dirname(os.path.dirname(current_file_path))
+sys.path.insert(0, project_root)
+
 from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIChatClient
 from agent_framework.devui import serve
