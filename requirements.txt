@@ -1,11 +1,4 @@
 fastapi
 uvicorn
-mangum
 motor
 python-dotenv
-semantic-kernel>=1.35.0
-semantic-kernel[google]>=1.35.0
-semantic-kernel[autogen]>=1.35.0
-semantic-kernel[mcp]>=1.35.0
-semantic-kernel[mongo]>=1.35.0
-azure-ai-projects>=1.0.0b11

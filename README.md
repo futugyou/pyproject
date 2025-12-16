@@ -41,5 +41,5 @@ devui ./agent_adapter
 ## Other
 
 ```
-source /workspace/pyproject/.venv/bin/activate
+source .venv/bin/activate
 ```
