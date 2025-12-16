@@ -11,6 +11,12 @@ class LightInfo(BaseModel):
     is_on: bool
 
 
+class LightListInfo(BaseModel):
+    """Information about light list."""
+
+    items: list[LightInfo]
+
+
 lights = [
     LightInfo(id="1", name="Table Lamp", is_on=False),
     LightInfo(id="2", name="Porch light", is_on=False),
@@ -44,5 +50,5 @@ def change_state(
 @ai_function(
     name="get_lights", description="Gets a list of lights and their current state"
 )
-def get_lights() -> list[LightInfo]:
-    return lights
+def get_lights() -> LightListInfo:
+    return LightListInfo(items=lights)
