@@ -15,6 +15,7 @@ from agent_framework.observability import configure_otel_providers
 # Enable console output for local development
 configure_otel_providers()
 
+
 def main():
     entities = [weather_agent, joke_agent, light_agent]
 

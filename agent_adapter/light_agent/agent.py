@@ -12,8 +12,13 @@ from agent_framework import ChatAgent, ChatMessage, Role
 from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory
+from agent_adapter import otel
 from agent_adapter.tools.light import get_lights, change_state, LightInfo, LightListInfo
-from agent_framework.observability import configure_otel_providers,get_tracer, get_meter
+from agent_framework.observability import (
+    configure_otel_providers,
+    get_tracer,
+    get_meter,
+)
 from opentelemetry import trace
 from opentelemetry.trace.span import format_trace_id
 import logging
@@ -45,8 +50,10 @@ async def get_lights() -> AsyncGenerator[str, None]:
         yield "No structured data found in response"
 
 
-async def change_light_state() -> str:    
-    with get_tracer().start_as_current_span(name="change_light_state", kind=trace.SpanKind.CLIENT):
+async def change_light_state() -> str:
+    with get_tracer().start_as_current_span(
+        name="change_light_state", kind=trace.SpanKind.CLIENT
+    ):
         response = await agent.run(
             "can you turn off all the lights?", response_format=LightInfo
         )
@@ -54,7 +61,9 @@ async def change_light_state() -> str:
         counter.add(1, {"func": "list"})
         if response.user_input_requests:
             for user_input_needed in response.user_input_requests:
-                logging.info(f"user_approval_needed function: {user_input_needed.function_call.name}, arguments: {user_input_needed.function_call.arguments}")
+                logging.info(
+                    f"user_approval_needed function: {user_input_needed.function_call.name}, arguments: {user_input_needed.function_call.arguments}"
+                )
                 print(f"Function: {user_input_needed.function_call.name}")
                 print(f"Arguments: {user_input_needed.function_call.arguments}")
 
@@ -73,7 +82,9 @@ async def change_light_state() -> str:
         counter.add(1, {"func": "change"})
         if response.value:
             light = response.value
-            logging.info(f"change light state result: light {light.id}:{light.name} is {'on' if light.is_on else 'off'}")
+            logging.info(
+                f"change light state result: light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
+            )
             print(light)
             return f"Light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
         else:
@@ -94,8 +105,10 @@ async def pack_run():
 
 
 if __name__ == "__main__":
-    configure_otel_providers()
-    with get_tracer().start_as_current_span("light_agent_span", kind=trace.SpanKind.CLIENT) as current_span:
+    otel.otel_configure()
+    with get_tracer().start_as_current_span(
+        "light_agent_span", kind=trace.SpanKind.CLIENT
+    ) as current_span:
         print(f"Trace ID: {format_trace_id(current_span.get_span_context().trace_id)}")
         # asyncio.run(pack_run())
         asyncio.run(change_light_state())
