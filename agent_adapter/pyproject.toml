@@ -5,9 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "agent-framework>=1.0.0b251211",
-    "agent-framework-devui>=1.0.0b251211",
+    "agent-framework>=1.0.0b251216",
+    "agent-framework-devui>=1.0.0b251216",
     "openai>=1.99.9",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.39.1",
     "pydantic>=2.11.10",
     "python-dotenv>=1.1.1",
 ]

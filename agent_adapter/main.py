@@ -10,7 +10,10 @@ from agent_framework.devui import serve
 from agent_adapter.weather_agent.agent import agent as weather_agent
 from agent_adapter.joke_agent.agent import agent as joke_agent
 from agent_adapter.light_agent.agent import agent as light_agent
+from agent_framework.observability import configure_otel_providers
 
+# Enable console output for local development
+configure_otel_providers()
 
 def main():
     entities = [weather_agent, joke_agent, light_agent]
