@@ -13,6 +13,10 @@ from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory
 from agent_adapter.tools.light import get_lights, change_state, LightInfo, LightListInfo
+from agent_framework.observability import configure_otel_providers,get_tracer, get_meter
+from opentelemetry import trace
+from opentelemetry.trace.span import format_trace_id
+import logging
 
 
 def get_light_agent() -> ChatAgent:
@@ -41,33 +45,40 @@ async def get_lights() -> AsyncGenerator[str, None]:
         yield "No structured data found in response"
 
 
-async def change_light_state() -> str:
-    response = await agent.run(
-        "can you turn off all the lights?", response_format=LightInfo
-    )
-    if response.user_input_requests:
-        for user_input_needed in response.user_input_requests:
-            print(f"Function: {user_input_needed.function_call.name}")
-            print(f"Arguments: {user_input_needed.function_call.arguments}")
+async def change_light_state() -> str:    
+    with get_tracer().start_as_current_span(name="change_light_state", kind=trace.SpanKind.CLIENT):
+        response = await agent.run(
+            "can you turn off all the lights?", response_format=LightInfo
+        )
+        counter = get_meter().create_counter("llm_call_counter")
+        counter.add(1, {"func": "list"})
+        if response.user_input_requests:
+            for user_input_needed in response.user_input_requests:
+                logging.info(f"user_approval_needed function: {user_input_needed.function_call.name}, arguments: {user_input_needed.function_call.arguments}")
+                print(f"Function: {user_input_needed.function_call.name}")
+                print(f"Arguments: {user_input_needed.function_call.arguments}")
 
-    approval_message = ChatMessage(
-        role=Role.USER, contents=[user_input_needed.create_response(True)]
-    )
+        approval_message = ChatMessage(
+            role=Role.USER, contents=[user_input_needed.create_response(True)]
+        )
 
-    response = await agent.run(
-        [
-            "can you turn off all the lights?",
-            ChatMessage(role=Role.ASSISTANT, contents=[user_input_needed]),
-            approval_message,
-        ],
-        response_format=LightInfo,
-    )
-    if response.value:
-        light = response.value
-        print(light)
-        return f"Light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
-    else:
-        return "No structured data found in response"
+        response = await agent.run(
+            [
+                "can you turn off all the lights?",
+                ChatMessage(role=Role.ASSISTANT, contents=[user_input_needed]),
+                approval_message,
+            ],
+            response_format=LightInfo,
+        )
+        counter.add(1, {"func": "change"})
+        if response.value:
+            light = response.value
+            logging.info(f"change light state result: light {light.id}:{light.name} is {'on' if light.is_on else 'off'}")
+            print(light)
+            return f"Light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
+        else:
+            logging.info("No structured data found in response")
+            return "No structured data found in response"
 
 
 async def run(query: str) -> str:
@@ -83,5 +94,8 @@ async def pack_run():
 
 
 if __name__ == "__main__":
-    # asyncio.run(pack_run())
-    asyncio.run(change_light_state())
+    configure_otel_providers()
+    with get_tracer().start_as_current_span("light_agent_span", kind=trace.SpanKind.CLIENT) as current_span:
+        print(f"Trace ID: {format_trace_id(current_span.get_span_context().trace_id)}")
+        # asyncio.run(pack_run())
+        asyncio.run(change_light_state())
