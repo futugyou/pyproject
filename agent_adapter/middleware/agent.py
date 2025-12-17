@@ -1,6 +1,7 @@
 import logging
-from agent_framework import agent_middleware,AgentRunContext
- 
+from agent_framework import agent_middleware, AgentRunContext
+
+
 @agent_middleware
 async def logging_agent_middleware(
     context: AgentRunContext,

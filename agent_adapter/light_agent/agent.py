@@ -24,6 +24,7 @@ from agent_adapter import client_factory
 from agent_adapter import otel
 from agent_adapter.tools.light import get_lights, change_state, LightInfo, LightListInfo
 from agent_adapter.middleware.agent import logging_agent_middleware
+from agent_adapter.middleware.function import logging_function_middleware
 
 
 def get_light_agent() -> ChatAgent:
@@ -32,7 +33,7 @@ def get_light_agent() -> ChatAgent:
     agent = client.create_agent(
         instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off",
         name="light",
-        middleware=[logging_agent_middleware],
+        middleware=[logging_agent_middleware, logging_function_middleware],
         tools=[get_lights, change_state],
     )
     return agent
