@@ -7,13 +7,11 @@ sys.path.insert(0, str(project_root))
 
 
 import asyncio
+import logging
+
 from typing import AsyncGenerator
 from agent_framework import ChatAgent, ChatMessage, Role
 from agent_framework.openai import OpenAIChatClient
-
-from agent_adapter import client_factory
-from agent_adapter import otel
-from agent_adapter.tools.light import get_lights, change_state, LightInfo, LightListInfo
 from agent_framework.observability import (
     configure_otel_providers,
     get_tracer,
@@ -21,7 +19,11 @@ from agent_framework.observability import (
 )
 from opentelemetry import trace
 from opentelemetry.trace.span import format_trace_id
-import logging
+
+from agent_adapter import client_factory
+from agent_adapter import otel
+from agent_adapter.tools.light import get_lights, change_state, LightInfo, LightListInfo
+from agent_adapter.middleware.agent import logging_agent_middleware
 
 
 def get_light_agent() -> ChatAgent:
@@ -30,6 +32,7 @@ def get_light_agent() -> ChatAgent:
     agent = client.create_agent(
         instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off",
         name="light",
+        middleware=[logging_agent_middleware],
         tools=[get_lights, change_state],
     )
     return agent
