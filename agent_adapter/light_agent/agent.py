@@ -35,7 +35,7 @@ from agent_adapter.middleware.chat import LoggingChatMiddleware
 def get_light_agent() -> ChatAgent:
     client = client_factory.build_client("openai")
     chat = LoggingChatMiddleware()
-    print(os.getenv("POSTGRES_URI"))
+
     agent = client.create_agent(
         instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off",
         name="light",

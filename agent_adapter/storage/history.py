@@ -52,8 +52,7 @@ class PostgresChatMessageStore:
             self._postgres_client = await asyncpg.connect(self.postgres_url)
 
     def get_table_name(self) -> str:
-        """Get the name of the table for this thread's messages."""
-        return f"{self._table_name}:{self.thread_id}"
+        return f"{self._table_name}_{self.thread_id.replace('-', '_')}"
 
     async def add_messages(self, messages: Sequence[ChatMessage]) -> None:
         """Add messages to the PostgreSQL store."""
