@@ -5,9 +5,12 @@ current_file_path = Path(__file__).resolve()
 project_root = current_file_path.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-
+import os
 import asyncio
 import logging
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from typing import AsyncGenerator
 from agent_framework import ChatAgent, ChatMessage, Role
@@ -22,19 +25,25 @@ from opentelemetry.trace.span import format_trace_id
 
 from agent_adapter import client_factory
 from agent_adapter import otel
+from agent_adapter.storage import history
 from agent_adapter.tools.light import get_lights, change_state, LightInfo, LightListInfo
 from agent_adapter.middleware.agent import logging_agent_middleware
 from agent_adapter.middleware.function import logging_function_middleware
+from agent_adapter.middleware.chat import LoggingChatMiddleware
 
 
 def get_light_agent() -> ChatAgent:
     client = client_factory.build_client("openai")
-
+    chat = LoggingChatMiddleware()
+    print(os.getenv("POSTGRES_URI"))
     agent = client.create_agent(
         instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off",
         name="light",
-        middleware=[logging_agent_middleware, logging_function_middleware],
+        middleware=[logging_agent_middleware, logging_function_middleware, chat],
         tools=[get_lights, change_state],
+        chat_message_store_factory=lambda: history.PostgresChatMessageStore(
+            postgres_url=os.getenv("POSTGRES_URI")
+        ),
     )
     return agent
 

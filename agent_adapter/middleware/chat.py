@@ -19,7 +19,9 @@ class LoggingChatMiddleware(ChatMiddleware):
 
         for i, message in enumerate(context.messages):
             content = message.text if message.text else str(message.contents)
-            logging.info(f"[LoggingChatMiddleware] Message {i + 1} ({message.role.value}): {content}")
+            logging.info(
+                f"[LoggingChatMiddleware] Message {i + 1} ({message.role.value}): {content}"
+            )
 
         logging.info(f"[LoggingChatMiddleware] Total messages: {len(context.messages)}")
 
@@ -37,7 +39,9 @@ async def logging_chat_middleware(
 
     for i, message in enumerate(context.messages):
         content = message.text if message.text else str(message.contents)
-        logging.info(f"[LoggingChatMiddleware] Message {i + 1} ({message.role.value}): {content}")
+        logging.info(
+            f"[logging_chat_middleware] Message {i + 1} ({message.role.value}): {content}"
+        )
 
     await next(context)
 
