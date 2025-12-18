@@ -1,6 +1,10 @@
 import logging
 import time
-from agent_framework import FunctionMiddleware,function_middleware, FunctionInvocationContext
+from agent_framework import (
+    FunctionMiddleware,
+    function_middleware,
+    FunctionInvocationContext,
+)
 
 
 @function_middleware
