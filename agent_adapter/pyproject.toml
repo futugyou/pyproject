@@ -8,9 +8,11 @@ dependencies = [
     "agent-framework>=1.0.0b251216",
     "agent-framework-devui>=1.0.0b251216",
     "asyncpg>=0.31.0",
+    "databases>=0.9.0",
     "openai>=1.99.9",
     "opentelemetry-exporter-otlp-proto-grpc>=1.39.1",
     "pgvector>=0.4.2",
     "pydantic>=2.11.10",
     "python-dotenv>=1.1.1",
+    "sqlalchemy[asyncio]>=2.0.45",
 ]
