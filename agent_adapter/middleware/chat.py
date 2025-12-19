@@ -1,4 +1,5 @@
 import logging
+from typing import Callable, Awaitable
 from agent_framework import (
     ChatContext,
     ChatMessage,

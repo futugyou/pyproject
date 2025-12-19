@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Callable, Awaitable
 from agent_framework import (
     FunctionMiddleware,
     function_middleware,

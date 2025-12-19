@@ -19,11 +19,12 @@ from agent_adapter import otel
 from agent_adapter.weather_agent.agent import agent as weather_agent
 from agent_adapter.joke_agent.agent import agent as joke_agent
 from agent_adapter.light_agent.agent import agent as light_agent
+from agent_adapter.text_workflow.workflow import workflow as text_workflow
 
 
 def main():
     otel.otel_configure()
-    entities = [weather_agent, joke_agent, light_agent]
+    entities = [weather_agent, joke_agent, light_agent, text_workflow]
 
     serve(entities=entities, port=8090, auto_open=True, tracing_enabled=True)
 
