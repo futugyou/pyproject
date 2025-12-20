@@ -4,19 +4,33 @@ from collections.abc import Sequence
 from typing import Any
 from pydantic import BaseModel
 import asyncpg
-from agent_framework import ChatMessage
+from agent_framework import ChatMessage, ChatMessageStoreProtocol
+from agent_framework._serialization import SerializationMixin
 
 
-class PostgresStoreState(BaseModel):
+class PostgresStoreState(SerializationMixin):
     """State model for serializing and deserializing Postgres chat message store data."""
 
     thread_id: str
-    postgres_url: str
-    table_name: str = "chat_messages"
+    postgres_url: str | None = None
+    table_name: str = "python_chat_messages"
     max_messages: int | None = None
 
+    def __init__(
+        self,
+        thread_id: str,
+        postgres_url: str | None = None,
+        table_name: str = "chat_messages",
+        max_messages: int | None = None,
+    ) -> None:
+        """Initialize the PostgresStoreState with the provided values."""
+        self.thread_id = thread_id
+        self.postgres_url = postgres_url
+        self.table_name = table_name
+        self.max_messages = max_messages
 
-class PostgresChatMessageStore:
+
+class PostgresChatMessageStore(ChatMessageStoreProtocol):
     """PostgreSQL-backed implementation of ChatMessageStore using asyncpg."""
 
     def __init__(
@@ -54,6 +68,17 @@ class PostgresChatMessageStore:
     def get_table_name(self) -> str:
         return f"{self._table_name}_{self.thread_id.replace('-', '_')}"
 
+    async def list_messages(self) -> list[ChatMessage]:
+        """Get all messages from the store in chronological order."""
+        # Ensure PostgreSQL client is connected before proceeding
+        await self._ensure_client()
+
+        messages = await self._postgres_client.fetch(
+            f"SELECT message FROM {self.get_table_name()} ORDER BY created_at ASC"
+        )
+
+        return [self._deserialize_message(msg["message"]) for msg in messages]
+
     async def add_messages(self, messages: Sequence[ChatMessage]) -> None:
         """Add messages to the PostgreSQL store."""
         if not messages:
@@ -75,18 +100,7 @@ class PostgresChatMessageStore:
         if self.max_messages is not None:
             await self._trim_messages()
 
-    async def list_messages(self) -> list[ChatMessage]:
-        """Get all messages from the store in chronological order."""
-        # Ensure PostgreSQL client is connected before proceeding
-        await self._ensure_client()
-
-        messages = await self._postgres_client.fetch(
-            f"SELECT message FROM {self.get_table_name()} ORDER BY created_at ASC"
-        )
-
-        return [self._deserialize_message(msg["message"]) for msg in messages]
-
-    async def serialize_state(self, **kwargs: Any) -> Any:
+    async def serialize(self, **kwargs: Any) -> dict[str, Any]:
         """Serialize the current store state for persistence."""
         state = PostgresStoreState(
             thread_id=self.thread_id,
@@ -94,22 +108,46 @@ class PostgresChatMessageStore:
             table_name=self._table_name,
             max_messages=self.max_messages,
         )
-        return state.model_dump(**kwargs)
+        return state.to_dict(**kwargs)
 
-    async def deserialize_state(
+    @classmethod
+    async def deserialize(
+        cls, serialized_store_state: Any, **kwargs: Any
+    ) -> PostgresChatMessageStore:
+        if not serialized_store_state:
+            raise ValueError("serialized_store_state is required for deserialization")
+
+        # Validate and parse the serialized state using Pydantic
+        state = PostgresChatMessageStore.from_dict(serialized_store_state, **kwargs)
+
+        # Create and return a new store instance with the deserialized configuration
+        return cls(
+            postgres_url=state.postgres_url,
+            thread_id=state.thread_id,
+            table_name=state.table_name,
+            max_messages=state.max_messages,
+        )
+
+    async def update_from_state(
         self, serialized_store_state: Any, **kwargs: Any
     ) -> None:
-        """Deserialize state data into this store instance."""
-        if serialized_store_state:
-            state = PostgresStoreState.model_validate(serialized_store_state, **kwargs)
-            self.thread_id = state.thread_id
-            self._table_name = state.table_name
-            self.max_messages = state.max_messages
+        if not serialized_store_state:
+            return
 
-            # Reconnect to PostgreSQL if the URL changed
-            if state.postgres_url and state.postgres_url != self.postgres_url:
-                self.postgres_url = state.postgres_url
-                await self._ensure_client()
+        state = PostgresChatMessageStore.from_dict(serialized_store_state, **kwargs)
+
+        # Update store configuration from deserialized state
+        self.thread_id = state.thread_id
+        if state.postgres_url is not None:
+            self.postgres_url = state.postgres_url
+        self.key_prefix = state.key_prefix
+        self.max_messages = state.max_messages
+
+        if state.postgres_url and state.postgres_url != getattr(
+            self, "_last_postgres_url", None
+        ):
+            self._last_postgres_url = state.postgres_url
+            await self._ensure_client()
 
     async def _trim_messages(self) -> None:
         """Trim the messages table to the maximum number of messages."""

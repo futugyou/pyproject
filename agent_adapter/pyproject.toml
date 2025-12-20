@@ -16,3 +16,6 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "sqlalchemy[asyncio]>=2.0.45",
 ]
+
+[tool.setuptools.packages.find]
+include = ["memory", "storage", "executor", "middleware"]
