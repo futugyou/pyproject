@@ -22,6 +22,7 @@ from agent_adapter.light_agent.agent import agent as light_agent
 from agent_adapter.text_workflow.workflow import workflow as text_workflow
 from agent_adapter.exec_workflow.workflow import workflow as exec_workflow
 from agent_adapter.writing_workflow.workflow import workflow as writing_workflow
+from agent_adapter.mslearn_agent.agent import agent as mslearn_agent
 
 
 def main():
@@ -33,6 +34,7 @@ def main():
         text_workflow,
         exec_workflow,
         writing_workflow,
+        mslearn_agent,
     ]
 
     serve(entities=entities, port=8090, auto_open=True, tracing_enabled=True)
