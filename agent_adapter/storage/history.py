@@ -1,4 +1,3 @@
-
 import uuid
 from sqlalchemy import (
     Column,
@@ -23,36 +22,37 @@ Base = declarative_base()
 class ChatMessageORM(Base):
     """SQLAlchemy model for storing chat messages in PostgreSQL."""
 
-    __tablename__ = "chat_messages"
+    __tablename__ = "python_chat_messages"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, nullable=False)
-    thread_id = Column(String, nullable=False)
+    conversation_id = Column(String, nullable=False)
+    message_id = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<ChatMessage(id={self.id}, user_id={self.user_id}, thread_id={self.thread_id})>"
+        return f"<ChatMessage(id={self.id}, user_id={self.user_id}, conversation_id={self.conversation_id}, message_id={self.message_id})>"
 
 
 class PostgresStoreState(SerializationMixin):
     """State model for serializing and deserializing Postgres chat message store data."""
 
     thread_id: str
+    user_id: str | None = (None,)
     postgres_url: str | None = None
-    table_name: str = "chat_messages"
     max_messages: int | None = None
 
     def __init__(
         self,
         thread_id: str,
         postgres_url: str | None = None,
-        table_name: str = "chat_messages",
+        user_id: str | None = None,
         max_messages: int | None = None,
     ) -> None:
         self.thread_id = thread_id
         self.postgres_url = postgres_url
-        self.table_name = table_name
+        self.user_id = user_id
         self.max_messages = max_messages
 
 
@@ -63,7 +63,6 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         self,
         postgres_url: str,
         thread_id: str | None = None,
-        table_name: str = "chat_messages",
         max_messages: int | None = None,
         user_id: str | None = None,
     ) -> None:
@@ -73,7 +72,6 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         self.postgres_url = postgres_url
         self.thread_id = thread_id or f"thread_{uuid.uuid4()}"
         self.user_id = user_id or self.thread_id
-        self._table_name = table_name
         self.max_messages = max_messages
 
         self.engine = create_async_engine(self.postgres_url, echo=True, future=True)
@@ -94,16 +92,13 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
             self._session = self.Session()
         await self._create_table_if_needed()
 
-    def get_table_name(self) -> str:
-        return self._table_name
-
     async def list_messages(self) -> List[ChatMessage]:
         """Get all messages from the store in chronological order."""
         await self._ensure_session()
 
         result = await self._session.execute(
             select(ChatMessageORM)
-            .filter_by(thread_id=self.thread_id)
+            .filter_by(conversation_id=self.thread_id)
             .order_by(ChatMessageORM.created_at.asc())
         )
         messages = result.scalars().all()
@@ -120,7 +115,10 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
             user_id = self.user_id
             serialized_message = self._serialize_message(message)
             new_message = ChatMessageORM(
-                user_id=user_id, thread_id=self.thread_id, message=serialized_message
+                user_id=user_id,
+                conversation_id=self.thread_id,
+                message=serialized_message,
+                message_id=message.message_id or uuid.uuid4(),
             )
             self._session.add(new_message)
 
@@ -135,7 +133,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         state = PostgresStoreState(
             thread_id=self.thread_id,
             postgres_url=self.postgres_url,
-            table_name=self._table_name,
+            user_id=self.user_id,
             max_messages=self.max_messages,
         )
         return state.to_dict(**kwargs)
@@ -152,7 +150,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         return cls(
             postgres_url=state.postgres_url,
             thread_id=state.thread_id,
-            table_name=state.table_name,
+            user_id=state.user_id,
             max_messages=state.max_messages,
         )
 
@@ -180,7 +178,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         await self._ensure_session()
 
         result = await self._session.execute(
-            select(ChatMessageORM).filter_by(thread_id=self.thread_id)
+            select(ChatMessageORM).filter_by(conversation_id=self.thread_id)
         )
         messages = result.scalars().all()
         count = len(messages)
@@ -190,7 +188,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
             excess_count = count - self.max_messages
             await self._session.execute(
                 select(ChatMessageORM)
-                .filter_by(thread_id=self.thread_id)
+                .filter_by(conversation_id=self.thread_id)
                 .order_by(ChatMessageORM.created_at.asc())
                 .limit(excess_count)
             )
@@ -208,7 +206,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         """Remove all messages from the store."""
         # await self._ensure_session()
         # await self._session.execute(
-        #     select(ChatMessageORM).filter_by(thread_id=self.thread_id).delete()
+        #     select(ChatMessageORM).filter_by(conversation_id=self.thread_id).delete()
         # )
         # await self._session.commit()
         ...
