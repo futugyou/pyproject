@@ -1,21 +1,21 @@
+
 import uuid
 from sqlalchemy import (
-    create_engine,
     Column,
     Integer,
     String,
     Text,
     DateTime,
-    ForeignKey,
-    Boolean,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime
-from pydantic import BaseModel
 from typing import Any, List, Sequence
 from agent_framework import ChatMessage, ChatMessageStoreProtocol
 from agent_framework._serialization import SerializationMixin
+
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.future import select
 
 Base = declarative_base()
 
@@ -65,28 +65,34 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         thread_id: str | None = None,
         table_name: str = "chat_messages",
         max_messages: int | None = None,
+        user_id: str | None = None,
     ) -> None:
         if not postgres_url:
             raise ValueError("postgres_url is required for PostgreSQL connection")
 
         self.postgres_url = postgres_url
         self.thread_id = thread_id or f"thread_{uuid.uuid4()}"
+        self.user_id = user_id or self.thread_id
         self._table_name = table_name
         self.max_messages = max_messages
 
-        self.engine = create_engine(self.postgres_url, echo=True)
-        self.Session = sessionmaker(bind=self.engine)
+        self.engine = create_async_engine(self.postgres_url, echo=True, future=True)
+        self.Session = sessionmaker(
+            bind=self.engine, class_=AsyncSession, expire_on_commit=False
+        )
         self._session = None
-        self._create_table_if_needed()
 
-    def _create_table_if_needed(self) -> None:
+    async def _create_table_if_needed(self) -> None:
         """Automatically create the table if it does not exist."""
-        Base.metadata.create_all(self.engine)
+        async with self.engine.begin() as conn:
+            # Create all tables asynchronously
+            await conn.run_sync(Base.metadata.create_all)
 
     async def _ensure_session(self) -> None:
         """Ensure that the session is initialized."""
         if self._session is None:
             self._session = self.Session()
+        await self._create_table_if_needed()
 
     def get_table_name(self) -> str:
         return self._table_name
@@ -95,12 +101,12 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         """Get all messages from the store in chronological order."""
         await self._ensure_session()
 
-        messages = (
-            self._session.query(ChatMessageORM)
+        result = await self._session.execute(
+            select(ChatMessageORM)
             .filter_by(thread_id=self.thread_id)
             .order_by(ChatMessageORM.created_at.asc())
-            .all()
         )
+        messages = result.scalars().all()
         return [self._deserialize_message(msg.message) for msg in messages]
 
     async def add_messages(self, messages: Sequence[ChatMessage]) -> None:
@@ -111,14 +117,14 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
         await self._ensure_session()
 
         for message in messages:
-            user_id = message.user_id  # Assuming ChatMessage includes user_id field
+            user_id = self.user_id
             serialized_message = self._serialize_message(message)
             new_message = ChatMessageORM(
                 user_id=user_id, thread_id=self.thread_id, message=serialized_message
             )
             self._session.add(new_message)
 
-        self._session.commit()
+        await self._session.commit()
 
         # Apply message limit if configured
         if self.max_messages is not None:
@@ -137,7 +143,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
     @classmethod
     async def deserialize(
         cls, serialized_store_state: Any, **kwargs: Any
-    ) -> 'PostgresChatMessageStore':
+    ) -> "PostgresChatMessageStore":
         if not serialized_store_state:
             raise ValueError("serialized_store_state is required for deserialization")
 
@@ -167,26 +173,28 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
             self, "_last_postgres_url", None
         ):
             self._last_postgres_url = state.postgres_url
-            self._ensure_session()
+            await self._ensure_session()
 
     async def _trim_messages(self) -> None:
         """Trim the messages table to the maximum number of messages."""
         await self._ensure_session()
 
-        count = (
-            self._session.query(ChatMessageORM)
-            .filter_by(thread_id=self.thread_id)
-            .count()
+        result = await self._session.execute(
+            select(ChatMessageORM).filter_by(thread_id=self.thread_id)
         )
+        messages = result.scalars().all()
+        count = len(messages)
+
         if count > self.max_messages:
             # Delete the oldest messages
             excess_count = count - self.max_messages
-            self._session.query(ChatMessageORM).filter_by(
-                thread_id=self.thread_id
-            ).order_by(ChatMessageORM.created_at.asc()).limit(excess_count).delete(
-                synchronize_session="fetch"
+            await self._session.execute(
+                select(ChatMessageORM)
+                .filter_by(thread_id=self.thread_id)
+                .order_by(ChatMessageORM.created_at.asc())
+                .limit(excess_count)
             )
-            self._session.commit()
+            await self._session.commit()
 
     def _serialize_message(self, message: ChatMessage) -> str:
         """Serialize a ChatMessage to JSON string."""
@@ -198,11 +206,14 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
 
     async def clear(self) -> None:
         """Remove all messages from the store."""
-        await self._ensure_session()
-        self._session.query(ChatMessageORM).filter_by(thread_id=self.thread_id).delete()
-        self._session.commit()
+        # await self._ensure_session()
+        # await self._session.execute(
+        #     select(ChatMessageORM).filter_by(thread_id=self.thread_id).delete()
+        # )
+        # await self._session.commit()
+        ...
 
     async def aclose(self) -> None:
         """Close the PostgreSQL session."""
         if self._session:
-            self._session.close()
+            await self._session.close()
