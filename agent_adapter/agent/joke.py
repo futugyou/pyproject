@@ -13,7 +13,7 @@ from agent_framework.openai import OpenAIChatClient
 from agent_adapter import client_factory
 
 
-def get_weather_agent() -> ChatAgent:
+def get_joke_agent() -> ChatAgent:
     client = client_factory.build_client("openai")
 
     agent = client.create_agent(
@@ -22,10 +22,8 @@ def get_weather_agent() -> ChatAgent:
     return agent
 
 
-agent = get_weather_agent()
-
-
 async def run(query: str) -> str:
+    agent = get_joke_agent()
     result = await agent.run(query)
     text = result.text
     print(f"message: {text}")
@@ -33,6 +31,7 @@ async def run(query: str) -> str:
 
 
 async def JokeWithEmojis(query: str) -> list[str]:
+    agent = get_joke_agent()
     messages: list[str] = []
     thread = agent.get_new_thread()
     result = await agent.run(query, thread=thread)

@@ -30,9 +30,6 @@ def get_docs_agent(mcp_tool: MCPStreamableHTTPTool) -> ChatAgent:
     return agent
 
 
-agent = get_docs_agent(get_docs_mcp_tool())
-
-
 async def run(query: str) -> str:
     async with get_docs_mcp_tool() as tool, get_docs_agent(tool) as agent:
         result = await agent.run(query)

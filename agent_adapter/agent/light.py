@@ -48,10 +48,8 @@ def get_light_agent() -> ChatAgent:
     return agent
 
 
-agent = get_light_agent()
-
-
-async def get_lights() -> AsyncGenerator[str, None]:
+async def get_lights_state() -> AsyncGenerator[str, None]:
+    agent = get_light_agent()
     response = await agent.run(
         "Can you tell me the status of all the lights?", response_format=LightListInfo
     )
@@ -64,6 +62,7 @@ async def get_lights() -> AsyncGenerator[str, None]:
 
 
 async def change_light_state() -> str:
+    agent = get_light_agent()
     with get_tracer().start_as_current_span(
         name="change_light_state", kind=trace.SpanKind.CLIENT
     ):
@@ -106,6 +105,7 @@ async def change_light_state() -> str:
 
 
 async def run(query: str) -> str:
+    agent = get_light_agent()
     result = await agent.run(query)
     text = result.text
     print(f"message: {text}")
@@ -113,7 +113,7 @@ async def run(query: str) -> str:
 
 
 async def pack_run():
-    async for light_status in get_lights():
+    async for light_status in get_lights_state():
         print(light_status)
 
 

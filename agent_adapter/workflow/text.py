@@ -15,7 +15,7 @@ from agent_adapter.executor.upper_text import UpperCase
 from agent_adapter.executor.reverse_text import reverse_text
 
 
-def get_workflow() -> Workflow:
+def get_text_workflow() -> Workflow:
     upper_case = UpperCase(id="upper_case_executor")
     workflow = (
         WorkflowBuilder(name="text_workflow")
@@ -26,11 +26,8 @@ def get_workflow() -> Workflow:
     return workflow
 
 
-workflow = get_workflow()
-
-
 async def main():
-    # Run the workflow and stream events
+    workflow = get_text_workflow()
     async for event in workflow.run_stream("hello world"):
         print(f"Event: {event}")
         if isinstance(event, WorkflowOutputEvent):

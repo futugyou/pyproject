@@ -28,7 +28,7 @@ from agent_adapter.executor.average import Average
 from agent_adapter.checkpoint.postgres import PostgresCheckpointStorage
 
 
-def get_workflow(checkpointStorage: CheckpointStorage | None = None) -> Workflow:
+def get_exec_workflow(checkpointStorage: CheckpointStorage | None = None) -> Workflow:
     dispatcher = Dispatcher(id="dispatcher")
     average = Average(id="average")
     summation = Sum(id="summation")
@@ -48,11 +48,8 @@ def get_workflow(checkpointStorage: CheckpointStorage | None = None) -> Workflow
     return workflow
 
 
-workflow = get_workflow(PostgresCheckpointStorage(os.getenv("POSTGRES_URI")))
-
-
 async def main():
-    # Run the workflow and stream events
+    workflow = get_exec_workflow(PostgresCheckpointStorage(os.getenv("POSTGRES_URI")))
     output: list[int | float] | None = None
     async for event in workflow.run_stream([random.randint(1, 100) for _ in range(10)]):
         if isinstance(event, WorkflowOutputEvent):
@@ -64,7 +61,7 @@ async def main():
 
 async def run_checkpoint():
     checkpoint_storage = PostgresCheckpointStorage(os.getenv("POSTGRES_URI"))
-    workflow = get_workflow(checkpoint_storage)
+    workflow = get_exec_workflow(checkpoint_storage)
     output: list[int | float] | None = None
     async for event in workflow.run_stream([random.randint(1, 100) for _ in range(10)]):
         if isinstance(event, WorkflowOutputEvent):

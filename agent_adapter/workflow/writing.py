@@ -23,7 +23,7 @@ from agent_adapter.executor.reviewer import Reviewer
 from agent_adapter import client_factory
 
 
-def get_workflow() -> Workflow:
+def get_writing_workflow() -> Workflow:
     client = client_factory.build_client("openai")
 
     writer = Writer(client)
@@ -38,11 +38,8 @@ def get_workflow() -> Workflow:
     return workflow
 
 
-workflow = get_workflow()
-
-
 async def main():
-    # Run the workflow and stream events
+    workflow = get_writing_workflow()
     events = await workflow.run(
         ChatMessage(role="user", text="Write an advertising slogan for Coca-Cola.")
     )
