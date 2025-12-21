@@ -8,5 +8,6 @@ class Average(CheckpointExecutor):
 
     @handler
     async def handle(self, numbers: list[int], ctx: WorkflowContext[float]):
+        self._messages = numbers
         average: float = sum(numbers) / len(numbers)
         await ctx.send_message(average)

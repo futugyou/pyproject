@@ -9,13 +9,9 @@ class Dispatcher(CheckpointExecutor):
     other executors.
     """
 
-    def __init__(self, id: str) -> None:
-        super().__init__(id=id)
-        self._messages: list[str] = []
-
     @handler
     async def handle(self, numbers: list[int], ctx: WorkflowContext[list[int]]):
         if not numbers:
             raise RuntimeError("Input must be a valid list of integers.")
-
+        self._messages = numbers
         await ctx.send_message(numbers)

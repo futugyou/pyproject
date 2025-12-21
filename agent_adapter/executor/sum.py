@@ -8,5 +8,6 @@ class Sum(CheckpointExecutor):
 
     @handler
     async def handle(self, numbers: list[int], ctx: WorkflowContext[int]):
+        self._messages = numbers
         total: int = sum(numbers)
         await ctx.send_message(total)

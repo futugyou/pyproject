@@ -7,7 +7,7 @@ class CheckpointExecutor(Executor):
 
     def __init__(self, id: str) -> None:
         super().__init__(id=id)
-        self._messages: list[str] = []
+        self._messages: list[int | float] = []
 
     async def on_checkpoint_save(self) -> dict[str, Any]:
         return {"messages": self._messages}

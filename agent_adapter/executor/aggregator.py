@@ -21,4 +21,5 @@ class Aggregator(CheckpointExecutor):
                 executors will produce.
             ctx (WorkflowContext[Never, list[int | float]]): A workflow context that can yield the final output.
         """
+        self._messages = results
         await ctx.yield_output(results)
