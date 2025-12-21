@@ -20,7 +20,11 @@ from agent_adapter import otel
 from agent_adapter.agent.weather import get_weather_agent
 from agent_adapter.agent.joke import get_joke_agent
 from agent_adapter.agent.light import get_light_agent
-from agent_adapter.agent.mslearn import get_docs_agent, get_docs_mcp_tool
+from agent_adapter.agent.mslearn import (
+    get_docs_agent,
+    get_docs_mcp_tool,
+    get_docs_hostmcp_tool,
+)
 from agent_adapter.agent.code import get_code_agent
 
 from agent_adapter.workflow.text import get_text_workflow
@@ -40,7 +44,7 @@ def main():
         get_text_workflow(),
         get_exec_workflow(PostgresCheckpointStorage(os.getenv("POSTGRES_URI"))),
         get_writing_workflow(),
-        get_docs_agent(get_docs_mcp_tool()),
+        get_docs_agent(get_docs_hostmcp_tool()),
         get_code_agent(),
     ]
 

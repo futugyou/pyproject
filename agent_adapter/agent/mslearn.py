@@ -7,7 +7,7 @@ sys.path.insert(0, str(project_root))
 
 
 import asyncio
-from agent_framework import ChatAgent, MCPStreamableHTTPTool
+from agent_framework import ChatAgent, MCPStreamableHTTPTool, HostedMCPTool
 from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory
@@ -17,6 +17,15 @@ def get_docs_mcp_tool() -> MCPStreamableHTTPTool:
     return MCPStreamableHTTPTool(
         name="Microsoft Learn MCP",
         url="https://learn.microsoft.com/api/mcp",
+    )
+
+# I don't understand the differences between MCPStreamableHTTPTool and HostedMCPTool, so how do I choose between them?
+def get_docs_hostmcp_tool() -> HostedMCPTool:
+    return HostedMCPTool(
+        name="Microsoft Learn MCP",
+        description="Tool for learning Microsoft.",
+        url="https://learn.microsoft.com/api/mcp",
+        approval_mode="never_require",
     )
 
 
