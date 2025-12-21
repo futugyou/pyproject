@@ -53,20 +53,28 @@ class PostgresProvider(ContextProvider):
         self.user_id = user_id
         self.thread_id = thread_id
         self.context_prompt = context_prompt
-        self._index_initialized = False
+        self._initialized = False
 
         # Initialize asynchronous database engine and session
         self.engine = create_async_engine(self.db_url, echo=True)
         self.Session = sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
         )
+        self._session = None
 
-        # Create tables asynchronously
-        self._initialize()
+    async def _ensure_session(self) -> None:
+        """Ensure that the session is initialized."""
+        if self._session is None:
+            self._session = self.Session()
 
-    async def _initialize(self) -> None:
-        """Initialize database tables asynchronously."""
+        if self._initialized == False:
+            await self._create_table_if_needed()
+            self._initialized = True
+
+    async def _create_table_if_needed(self) -> None:
+        """Automatically create the table if it does not exist."""
         async with self.engine.begin() as conn:
+            # Create all tables asynchronously
             await conn.run_sync(Base.metadata.create_all)
 
     async def _add(
@@ -80,7 +88,7 @@ class PostgresProvider(ContextProvider):
 
         docs = data if isinstance(data, list) else [data]
 
-        async with self.Session() as session:
+        async with self._session as session:
             async with session.begin():
                 for doc in docs:
                     message = Message(
@@ -103,7 +111,7 @@ class PostgresProvider(ContextProvider):
         """Runs a simple text search on messages."""
         self._validate_filters()
 
-        async with self.Session() as session:
+        async with self._session as session:
             stmt = (
                 select(Message)
                 .filter(Message.content.ilike(f"%{text}%"))
@@ -119,7 +127,7 @@ class PostgresProvider(ContextProvider):
 
     async def search_all(self, page_size: int = 200) -> list[dict[str, Any]]:
         """Returns all documents in the database."""
-        async with self.Session() as session:
+        async with self._session as session:
             stmt = select(Message).limit(page_size)
             result = await session.execute(stmt)
             messages = result.scalars().all()
@@ -181,6 +189,7 @@ class PostgresProvider(ContextProvider):
                 }
                 messages.append(shaped)
         if messages:
+            await self._ensure_session()
             await self._add(data=messages)
 
     @override
@@ -189,6 +198,7 @@ class PostgresProvider(ContextProvider):
     ) -> Context:
         """Called before invoking the model to provide scoped context."""
         self._validate_filters()
+        await self._ensure_session()
 
         messages_list = (
             [messages] if isinstance(messages, ChatMessage) else list(messages)
