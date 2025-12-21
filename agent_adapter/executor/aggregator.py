@@ -1,8 +1,9 @@
 from typing_extensions import Never
 from agent_framework import handler, WorkflowContext, Executor
+from .checkpoint import CheckpointExecutor
 
 
-class Aggregator(Executor):
+class Aggregator(CheckpointExecutor):
     """Aggregate the results from the different tasks and yield the final output."""
 
     @handler

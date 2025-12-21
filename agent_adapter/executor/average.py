@@ -1,8 +1,9 @@
 from typing_extensions import Never
 from agent_framework import handler, WorkflowContext, Executor
+from .checkpoint import CheckpointExecutor
 
 
-class Average(Executor):
+class Average(CheckpointExecutor):
     """Calculate the average of a list of integers."""
 
     @handler

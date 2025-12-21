@@ -1,8 +1,9 @@
 from typing_extensions import Never
 from agent_framework import handler, WorkflowContext, Executor
+from .checkpoint import CheckpointExecutor
 
 
-class Sum(Executor):
+class Sum(CheckpointExecutor):
     """Calculate the sum of a list of integers."""
 
     @handler
