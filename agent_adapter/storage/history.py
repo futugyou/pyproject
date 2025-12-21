@@ -118,7 +118,7 @@ class PostgresChatMessageStore(ChatMessageStoreProtocol):
                 user_id=user_id,
                 conversation_id=self.thread_id,
                 message=serialized_message,
-                message_id=message.message_id or uuid.uuid4(),
+                message_id=message.message_id or f"{uuid.uuid4()}",
             )
             self._session.add(new_message)
 
