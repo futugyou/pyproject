@@ -10,6 +10,10 @@ from agent_adapter.agent.mslearn import (
 )
 from agent_adapter.agent.code import get_code_agent
 
+from agent_adapter.workflow.text import get_text_workflow
+from agent_adapter.workflow.exec import get_exec_workflow
+from agent_adapter.workflow.writing import get_writing_workflow
+
 from agent_adapter import client_factory
 
 
@@ -44,4 +48,22 @@ def register_agents(app):
         app=app,
         agent=get_docs_agent(client, get_docs_mcp_tool()),
         path="/msdocs",
+    )
+
+    add_agent_framework_fastapi_endpoint(
+        app=app,
+        agent=get_text_workflow().as_agent(name="text-handler"),
+        path="/text-handler",
+    )
+
+    add_agent_framework_fastapi_endpoint(
+        app=app,
+        agent=get_exec_workflow().as_agent(name="number-handler"),
+        path="/number-handler",
+    )
+
+    add_agent_framework_fastapi_endpoint(
+        app=app,
+        agent=get_writing_workflow(client).as_agent(name="writing-handler"),
+        path="/writing",
     )
