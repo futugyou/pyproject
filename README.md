@@ -12,13 +12,13 @@ uv add dotenv fastapi motor "semantic-kernel[google]" uvicorn mcp
 
 ## Structure
 
-`api` use for vercle
+`app` use for vercle
 
-`app` use for faskapi server
+`web` use for faskapi project
 
 `google_colab` only for google colab
 
-And other floders are services used by `app`
+And other floders are services used by `web` or `app`
 
 ## Format
 

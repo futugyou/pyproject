@@ -4,7 +4,7 @@
             "src": "/app/main.py",
             "use": "@vercel/python",
             "config": {
-                "excludeFiles": "{semantic_kernel_adapter/**,mcp_adapter/**,langchain_adapter/**,agent_adapter/**,a2a_samples/**,autogen_demo/**,**/*.test.py,**/test_*.py,google_colab/**,oauth_client/**,public_opinion_monitoring/**,sample-data/**,static/**,assets/**}"
+                "excludeFiles": "{web/**,semantic_kernel_adapter/**,mcp_adapter/**,langchain_adapter/**,a2a_samples/**,autogen_demo/**,**/*.test.py,**/test_*.py,google_colab/**,oauth_client/**,public_opinion_monitoring/**,sample-data/**,static/**,assets/**}"
             }
         }
     ],

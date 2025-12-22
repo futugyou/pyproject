@@ -1,5 +1,6 @@
 from langchain.chat_models import init_chat_model
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_classic.agents.agent import AgentExecutor
+from langchain_classic.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage

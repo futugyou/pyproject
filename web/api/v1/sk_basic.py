@@ -4,7 +4,7 @@ from semantic_kernel.prompt_template import InputVariable, PromptTemplateConfig
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelFunction, KernelArguments
 from pydantic import BaseModel
-from app.dependencies import get_kernel_full
+from web.dependencies import get_kernel_full
 from semantic_kernel_adapter import basic, service
 
 router = APIRouter(prefix="/sk_basic", tags=["semantic_kernel_basic"])

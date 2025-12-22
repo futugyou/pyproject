@@ -1,5 +1,5 @@
 from fastapi import Depends
-from app.core.database import db
+from web.core.database import db
 
 from semantic_kernel_adapter import service
 

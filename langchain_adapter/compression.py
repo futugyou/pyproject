@@ -1,8 +1,8 @@
 from langchain.chat_models import init_chat_model
-from langchain.chains import RetrievalQA
-from langchain.indexes import VectorstoreIndexCreator
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import LLMChainExtractor
+from langchain_classic.chains.retrieval_qa.base import RetrievalQA
+from langchain_classic.indexes import VectorstoreIndexCreator
+from langchain_classic.retrievers import ContextualCompressionRetriever
+from langchain_classic.retrievers.document_compressors import LLMChainExtractor
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from langchain_community.document_loaders import TextLoader

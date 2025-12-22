@@ -1,11 +1,14 @@
 import faiss
 
 from datetime import datetime, timedelta
-from langchain.schema import Document
+from langchain_core.documents.base import Document
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain.chat_models import init_chat_model
-from langchain.retrievers import TimeWeightedVectorStoreRetriever
-from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain_classic.retrievers import (
+    MultiQueryRetriever,
+    TimeWeightedVectorStoreRetriever,
+    SelfQueryRetriever,
+)
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import WebBaseLoader
@@ -18,8 +21,7 @@ from langchain_text_splitters import (
 
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain.chains.query_constructor.base import AttributeInfo
+from langchain_classic.chains.query_constructor.schema import AttributeInfo
 
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field

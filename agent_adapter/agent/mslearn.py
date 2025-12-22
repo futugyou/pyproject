@@ -19,6 +19,7 @@ def get_docs_mcp_tool() -> MCPStreamableHTTPTool:
         url="https://learn.microsoft.com/api/mcp",
     )
 
+
 # I don't understand the differences between MCPStreamableHTTPTool and HostedMCPTool, so how do I choose between them?
 def get_docs_hostmcp_tool() -> HostedMCPTool:
     return HostedMCPTool(
