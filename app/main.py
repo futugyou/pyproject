@@ -4,7 +4,7 @@ from scalar_fastapi import get_scalar_api_reference
 from contextlib import asynccontextmanager, AsyncExitStack
 from dataclasses import dataclass
 from typing import Callable, Any
-
+from agent_adapter.agui import register_agents
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +19,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+register_agents(app)
 
 @app.get("/")
 def read_root():
