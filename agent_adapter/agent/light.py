@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from typing import AsyncGenerator
-from agent_framework import ChatAgent, ChatMessage, Role
+from agent_framework import ChatAgent, ChatMessage, Role, ChatClientProtocol
 from agent_framework.openai import OpenAIChatClient
 from agent_framework.observability import (
     configure_otel_providers,
@@ -32,8 +32,7 @@ from agent_adapter.middleware.function import logging_function_middleware
 from agent_adapter.middleware.chat import LoggingChatMiddleware
 
 
-def get_light_agent() -> ChatAgent:
-    client = client_factory.build_client("openai")
+def get_light_agent(client: ChatClientProtocol) -> ChatAgent:
     chat = LoggingChatMiddleware()
 
     agent = client.create_agent(
@@ -48,8 +47,8 @@ def get_light_agent() -> ChatAgent:
     return agent
 
 
-async def get_lights_state() -> AsyncGenerator[str, None]:
-    agent = get_light_agent()
+async def get_lights_state(client: ChatClientProtocol) -> AsyncGenerator[str, None]:
+    agent = get_light_agent(client)
     response = await agent.run(
         "Can you tell me the status of all the lights?", response_format=LightListInfo
     )
@@ -61,8 +60,8 @@ async def get_lights_state() -> AsyncGenerator[str, None]:
         yield "No structured data found in response"
 
 
-async def change_light_state() -> str:
-    agent = get_light_agent()
+async def change_light_state(client: ChatClientProtocol) -> str:
+    agent = get_light_agent(client)
     with get_tracer().start_as_current_span(
         name="change_light_state", kind=trace.SpanKind.CLIENT
     ):
@@ -104,24 +103,25 @@ async def change_light_state() -> str:
             return "No structured data found in response"
 
 
-async def run(query: str) -> str:
-    agent = get_light_agent()
+async def run(client: ChatClientProtocol, query: str) -> str:
+    agent = get_light_agent(client)
     result = await agent.run(query)
     text = result.text
     print(f"message: {text}")
     return text
 
 
-async def pack_run():
-    async for light_status in get_lights_state():
+async def pack_run(client: ChatClientProtocol):
+    async for light_status in get_lights_state(client):
         print(light_status)
 
 
 if __name__ == "__main__":
     otel.otel_configure()
+    client = client_factory.build_client("openai")
     with get_tracer().start_as_current_span(
         "light_agent_span", kind=trace.SpanKind.CLIENT
     ) as current_span:
         print(f"Trace ID: {format_trace_id(current_span.get_span_context().trace_id)}")
-        # asyncio.run(pack_run())
-        asyncio.run(change_light_state())
+        # asyncio.run(pack_run(client))
+        asyncio.run(change_light_state(client))

@@ -7,31 +7,29 @@ sys.path.insert(0, str(project_root))
 
 
 import asyncio
-from agent_framework import ChatAgent
+from agent_framework import ChatAgent, ChatClientProtocol
 from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory
 
 
-def get_joke_agent() -> ChatAgent:
-    client = client_factory.build_client("openai")
-
+def get_joke_agent(client: ChatClientProtocol) -> ChatAgent:
     agent = client.create_agent(
         instructions="You are good at telling jokes.", name="Joker"
     )
     return agent
 
 
-async def run(query: str) -> str:
-    agent = get_joke_agent()
+async def run(client: ChatClientProtocol, query: str) -> str:
+    agent = get_joke_agent(client)
     result = await agent.run(query)
     text = result.text
     print(f"message: {text}")
     return text
 
 
-async def JokeWithEmojis(query: str) -> list[str]:
-    agent = get_joke_agent()
+async def JokeWithEmojis(client: ChatClientProtocol, query: str) -> list[str]:
+    agent = get_joke_agent(client)
     messages: list[str] = []
     thread = agent.get_new_thread()
     result = await agent.run(query, thread=thread)
@@ -46,5 +44,6 @@ async def JokeWithEmojis(query: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    # asyncio.run(JokeAgent("Tell me a joke about a pirate."))
-    asyncio.run(JokeWithEmojis("Tell me a joke about a pirate."))
+    client = client_factory.build_client("openai")
+    # asyncio.run(JokeAgent(client, "Tell me a joke about a pirate."))
+    asyncio.run(JokeWithEmojis(client, "Tell me a joke about a pirate."))

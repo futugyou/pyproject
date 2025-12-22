@@ -33,19 +33,21 @@ from agent_adapter.workflow.writing import get_writing_workflow
 
 
 from agent_adapter.checkpoint.postgres import PostgresCheckpointStorage
+from agent_adapter import client_factory
 
 
 def main():
     otel.otel_configure()
+    client = client_factory.build_client("openai")
     entities = [
-        get_weather_agent(),
-        get_joke_agent(),
-        get_light_agent(),
+        get_weather_agent(client),
+        get_joke_agent(client),
+        get_light_agent(client),
         get_text_workflow(),
         get_exec_workflow(PostgresCheckpointStorage(os.getenv("POSTGRES_URI"))),
-        get_writing_workflow(),
-        get_docs_agent(get_docs_hostmcp_tool()),
-        get_code_agent(),
+        get_writing_workflow(client),
+        get_docs_agent(client, get_docs_hostmcp_tool()),
+        get_code_agent(client),
     ]
 
     serve(entities=entities, port=8090, auto_open=True, tracing_enabled=True)

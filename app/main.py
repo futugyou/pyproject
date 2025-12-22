@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Callable, Any
 from agent_adapter.agui import register_agents
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with AsyncExitStack() as stack:
@@ -21,6 +22,7 @@ app = FastAPI(
 
 register_agents(app)
 
+
 @app.get("/")
 def read_root():
     return {"Python": "on Vercel"}
@@ -30,6 +32,8 @@ def read_root():
 async def scalar_html():
     return get_scalar_api_reference(openapi_url=app.openapi_url, title="scalar doc")
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app.main:app", host="0.0.0.0", port=5001, reload=True)

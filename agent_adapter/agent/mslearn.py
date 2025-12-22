@@ -7,7 +7,12 @@ sys.path.insert(0, str(project_root))
 
 
 import asyncio
-from agent_framework import ChatAgent, MCPStreamableHTTPTool, HostedMCPTool
+from agent_framework import (
+    ChatAgent,
+    MCPStreamableHTTPTool,
+    HostedMCPTool,
+    ChatClientProtocol,
+)
 from agent_framework.openai import OpenAIChatClient
 
 from agent_adapter import client_factory
@@ -30,8 +35,9 @@ def get_docs_hostmcp_tool() -> HostedMCPTool:
     )
 
 
-def get_docs_agent(mcp_tool: MCPStreamableHTTPTool) -> ChatAgent:
-    client = client_factory.build_client("openai")
+def get_docs_agent(
+    client: ChatClientProtocol, mcp_tool: MCPStreamableHTTPTool
+) -> ChatAgent:
     agent = client.create_agent(
         instructions="You help with Microsoft documentation questions.",
         name="ms_docs",
@@ -41,7 +47,8 @@ def get_docs_agent(mcp_tool: MCPStreamableHTTPTool) -> ChatAgent:
 
 
 async def run(query: str) -> str:
-    async with get_docs_mcp_tool() as tool, get_docs_agent(tool) as agent:
+    client = client_factory.build_client("openai")
+    async with get_docs_mcp_tool() as tool, get_docs_agent(client, tool) as agent:
         result = await agent.run(query)
         text = result.text
         print(f"message: {text}")
