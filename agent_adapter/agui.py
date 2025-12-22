@@ -52,7 +52,7 @@ def register_agents(app):
     )
 
     # Workflow's start executor cannot handle list[ChatMessage]
-    
+
     # add_agent_framework_fastapi_endpoint(
     #     app=app,
     #     agent=get_text_workflow().as_agent(name="text-handler"),

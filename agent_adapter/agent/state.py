@@ -5,10 +5,10 @@ current_file_path = Path(__file__).resolve()
 project_root = current_file_path.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
- 
+
 from typing import Annotated
 from pydantic import Field
-from agent_framework import ChatAgent, ai_function
+from agent_framework import ChatAgent, ai_function, ChatClientProtocol
 from agent_framework.openai import OpenAIChatClient
 from agent_framework.ag_ui import AgentFrameworkAgent, RecipeConfirmationStrategy
 
