@@ -22,7 +22,7 @@ STATE_SCHEMA: dict[str, object] = {
     }
 }
 
-PREDICT_STATE_CONFIG: Dict[str, Dict[str, str]] = {
+PREDICT_STATE_CONFIG: dict[str, dict[str, str]] = {
     "language": {"tool": "update_language", "tool_argument": "language"}
 }
 
