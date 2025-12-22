@@ -9,6 +9,7 @@ from agent_adapter.agent.mslearn import (
     get_docs_hostmcp_tool,
 )
 from agent_adapter.agent.code import get_code_agent
+from agent_adapter.agent.state import get_state_agent
 
 from agent_adapter.workflow.text import get_text_workflow
 from agent_adapter.workflow.exec import get_exec_workflow
@@ -50,20 +51,28 @@ def register_agents(app):
         path="/msdocs",
     )
 
-    add_agent_framework_fastapi_endpoint(
-        app=app,
-        agent=get_text_workflow().as_agent(name="text-handler"),
-        path="/text-handler",
-    )
+    # Workflow's start executor cannot handle list[ChatMessage]
+    
+    # add_agent_framework_fastapi_endpoint(
+    #     app=app,
+    #     agent=get_text_workflow().as_agent(name="text-handler"),
+    #     path="/text-handler",
+    # )
+
+    # add_agent_framework_fastapi_endpoint(
+    #     app=app,
+    #     agent=get_exec_workflow().as_agent(name="number-handler"),
+    #     path="/number-handler",
+    # )
+
+    # add_agent_framework_fastapi_endpoint(
+    #     app=app,
+    #     agent=get_writing_workflow(client).as_agent(name="writing-handler"),
+    #     path="/writing",
+    # )
 
     add_agent_framework_fastapi_endpoint(
         app=app,
-        agent=get_exec_workflow().as_agent(name="number-handler"),
-        path="/number-handler",
-    )
-
-    add_agent_framework_fastapi_endpoint(
-        app=app,
-        agent=get_writing_workflow(client).as_agent(name="writing-handler"),
-        path="/writing",
+        agent=get_state_agent(client),
+        path="/state",
     )

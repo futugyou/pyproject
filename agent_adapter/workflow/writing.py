@@ -10,6 +10,7 @@ import asyncio
 import random
 from typing_extensions import Never
 from agent_framework import (
+    ChatClientProtocol,
     ChatMessage,
     AgentRunEvent,
     Workflow,
