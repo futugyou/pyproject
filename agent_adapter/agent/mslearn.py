@@ -39,7 +39,8 @@ def get_docs_agent(
     client: ChatClientProtocol, mcp_tool: MCPStreamableHTTPTool
 ) -> ChatAgent:
     agent = client.create_agent(
-        instructions="You help with Microsoft documentation questions.",
+        instructions="You help with Microsoft documentation questions.\n"
+        "All questions related to Microsoft documentation must first be addressed by using the mcp_tool to obtain the answer before providing a response.",
         name="ms_docs",
         tools=mcp_tool,
     )
