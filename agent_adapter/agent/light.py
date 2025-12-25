@@ -36,7 +36,8 @@ def get_light_agent(client: ChatClientProtocol) -> ChatAgent:
     chat = LoggingChatMiddleware()
 
     agent = client.create_agent(
-        instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off",
+        instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off.\n"
+        "When calling a tool, the tool's return value MUST be used as the response to the user. This value is typically in JSON format.",
         name="light",
         middleware=[logging_agent_middleware, logging_function_middleware, chat],
         tools=[get_lights, change_state],
