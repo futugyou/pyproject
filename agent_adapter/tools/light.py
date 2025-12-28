@@ -26,7 +26,7 @@ lights = [
 
 @ai_function(
     name="change_state",
-    description="Changes the state of the light",
+    description="Changes the state of the light and returns all lights",
     approval_mode="always_require",
 )
 def change_state(
@@ -37,18 +37,19 @@ def change_state(
             description="light status, `true` means open the light, `false` means close the light"
         ),
     ],
-) -> LightInfo | None:
+) -> dict[str, any]:
     light = next((light for light in lights if light.id == id), None)
 
-    if not light:
-        return None
+    if light:
+        light.is_on = is_on
 
-    light.is_on = is_on
-    return light
+    light_list = LightListInfo(items=lights)
+    return light_list.dict()
 
 
 @ai_function(
     name="get_lights", description="Gets a list of lights and their current state"
 )
-def get_lights() -> LightListInfo:
-    return LightListInfo(items=lights)
+def get_lights() -> dict[str, any]:
+    light_list = LightListInfo(items=lights)
+    return light_list.dict()
