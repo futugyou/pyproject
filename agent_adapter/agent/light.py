@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from typing import AsyncGenerator
+from typing import Callable, AsyncGenerator
 from agent_framework import ChatAgent, ChatMessage, Role, ChatClientProtocol
 from agent_framework.openai import OpenAIChatClient
 from agent_framework.observability import (
@@ -44,6 +44,7 @@ def get_light_agent(client: ChatClientProtocol) -> ChatAgent:
         chat_message_store_factory=lambda: history.PostgresChatMessageStore(
             postgres_url=os.getenv("POSTGRES_URI")
         ),
+        chat_options={"tool_choice": "required"},
     )
     return agent
 
@@ -52,22 +53,22 @@ async def get_lights_state(client: ChatClientProtocol) -> AsyncGenerator[str, No
     agent = get_light_agent(client)
     response = await agent.run(
         "Can you tell me the status of all the lights?", response_format=LightListInfo
-    )
+    ) 
     if response.value:
         lights = response.value
-        for light in lights.items:
-            yield f"Light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
+        for light in lights.items: 
+            yield light.model_dump_json()
     else:
         yield "No structured data found in response"
 
 
-async def change_light_state(client: ChatClientProtocol) -> str:
+async def change_light_state(client: ChatClientProtocol) -> AsyncGenerator[str, None]:
     agent = get_light_agent(client)
     with get_tracer().start_as_current_span(
         name="change_light_state", kind=trace.SpanKind.CLIENT
     ):
         response = await agent.run(
-            "can you turn off all the lights?", response_format=LightInfo
+            "can you turn off all the lights?", response_format=LightListInfo
         )
         counter = get_meter().create_counter("llm_call_counter")
         counter.add(1, {"func": "list"})
@@ -89,19 +90,15 @@ async def change_light_state(client: ChatClientProtocol) -> str:
                 ChatMessage(role=Role.ASSISTANT, contents=[user_input_needed]),
                 approval_message,
             ],
-            response_format=LightInfo,
+            response_format=LightListInfo,
         )
         counter.add(1, {"func": "change"})
         if response.value:
-            light = response.value
-            logging.info(
-                f"change light state result: light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
-            )
-            print(light)
-            return f"Light {light.id}:{light.name} is {'on' if light.is_on else 'off'}"
+            lights = response.value
+            for light in lights.items: 
+                yield light.model_dump_json()
         else:
-            logging.info("No structured data found in response")
-            return "No structured data found in response"
+            yield "No structured data found in response"
 
 
 async def run(client: ChatClientProtocol, query: str) -> str:
@@ -112,10 +109,9 @@ async def run(client: ChatClientProtocol, query: str) -> str:
     return text
 
 
-async def pack_run(client: ChatClientProtocol):
-    async for light_status in get_lights_state(client):
+async def pack_run(client: ChatClientProtocol, light_state_func: Callable[[ChatClientProtocol], AsyncGenerator[str, None]]):
+    async for light_status in light_state_func(client):
         print(light_status)
-
 
 if __name__ == "__main__":
     otel.otel_configure()
@@ -124,5 +120,5 @@ if __name__ == "__main__":
         "light_agent_span", kind=trace.SpanKind.CLIENT
     ) as current_span:
         print(f"Trace ID: {format_trace_id(current_span.get_span_context().trace_id)}")
-        # asyncio.run(pack_run(client))
-        asyncio.run(change_light_state(client))
+        asyncio.run(pack_run(client, get_lights_state))  # get_lights_state
+        # asyncio.run(pack_run(client, change_light_state))  # change_light_state
