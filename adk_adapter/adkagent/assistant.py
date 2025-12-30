@@ -47,12 +47,8 @@ def build_assistant_adk_agent(base_agent: BaseAgent) -> ADKAgent:
 
 
 if __name__ == "__main__":
-    import uvicorn
-    from fastapi import FastAPI
+    from adk_adapter import adkrun
 
     llm = client_factory.build_llm()
     base_agent = build_assistant_agent(llm)
-    adk_agent = build_assistant_adk_agent(base_agent)
-    app = FastAPI()
-    add_adk_fastapi_endpoint(app, adk_agent, path="/")
-    uvicorn.run(app, host="localhost", port=8000)
+    asyncio.run(adkrun.run_agent(base_agent, "hello"))
