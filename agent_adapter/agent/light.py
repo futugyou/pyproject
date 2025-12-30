@@ -53,10 +53,10 @@ async def get_lights_state(client: ChatClientProtocol) -> AsyncGenerator[str, No
     agent = get_light_agent(client)
     response = await agent.run(
         "Can you tell me the status of all the lights?", response_format=LightListInfo
-    ) 
+    )
     if response.value:
         lights = response.value
-        for light in lights.items: 
+        for light in lights.items:
             yield light.model_dump_json()
     else:
         yield "No structured data found in response"
@@ -95,7 +95,7 @@ async def change_light_state(client: ChatClientProtocol) -> AsyncGenerator[str, 
         counter.add(1, {"func": "change"})
         if response.value:
             lights = response.value
-            for light in lights.items: 
+            for light in lights.items:
                 yield light.model_dump_json()
         else:
             yield "No structured data found in response"
@@ -109,9 +109,13 @@ async def run(client: ChatClientProtocol, query: str) -> str:
     return text
 
 
-async def pack_run(client: ChatClientProtocol, light_state_func: Callable[[ChatClientProtocol], AsyncGenerator[str, None]]):
+async def pack_run(
+    client: ChatClientProtocol,
+    light_state_func: Callable[[ChatClientProtocol], AsyncGenerator[str, None]],
+):
     async for light_status in light_state_func(client):
         print(light_status)
+
 
 if __name__ == "__main__":
     otel.otel_configure()

@@ -18,6 +18,7 @@ dev = [
 [tool.uv.workspace]
 members = [
     "agent_adapter",
+    "adk_adapter",
 ]
 
 [project.scripts]
