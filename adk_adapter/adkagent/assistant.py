@@ -6,7 +6,6 @@ project_root = current_file_path.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
-import asyncio
 from google.adk.models.google_llm import BaseLlm
 from google.adk.agents import LlmAgent, BaseAgent
 from google.adk import tools as adk_tools
@@ -35,6 +34,7 @@ def build_assistant_agent(llm: BaseLlm) -> BaseAgent:
 
 
 if __name__ == "__main__":
+    import asyncio
     from adk_adapter import adkutil
 
     llm = client_factory.build_llm()

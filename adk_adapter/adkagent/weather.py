@@ -6,7 +6,6 @@ project_root = current_file_path.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
-import asyncio
 import httpx
 import json
 from google.adk.models.google_llm import BaseLlm
@@ -143,6 +142,7 @@ def build_weather_adk_agent(base_agent: BaseAgent) -> ADKAgent:
 
 
 if __name__ == "__main__":
+    import asyncio
     from adk_adapter import adkrun
 
     llm = client_factory.build_llm()

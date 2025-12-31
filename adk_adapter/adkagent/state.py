@@ -6,7 +6,6 @@ project_root = current_file_path.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
-import asyncio
 from typing import Dict
 from pydantic import BaseModel
 from google.adk.models.google_llm import BaseLlm
@@ -51,6 +50,7 @@ def build_state_agent(llm: BaseLlm) -> BaseAgent:
 
 
 if __name__ == "__main__":
+    import asyncio
     from adk_adapter import adkutil
 
     llm = client_factory.build_llm()

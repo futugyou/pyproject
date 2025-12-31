@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext
+from google.adk.models.google_llm import BaseLlm
 
 from adk_adapter import client_factory
 
@@ -63,6 +64,7 @@ def build_answer_agent(llm: BaseLlm) -> BaseAgent:
 
 
 if __name__ == "__main__":
+    import asyncio
     from adk_adapter import adkutil
 
     llm = client_factory.build_llm()
