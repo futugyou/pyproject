@@ -13,6 +13,10 @@ from adk_adapter.adkagent.state import (
     build_state_agent,
 )
 
+from adk_adapter.adkagent.answer import (
+    build_answer_agent,
+)
+
 from adk_adapter import client_factory
 
 
@@ -37,4 +41,10 @@ def register_adk_agents(app):
         app=app,
         agent=agui_agent_wrapper(build_state_agent(llm), app_name, user_id),
         path="/adk_state",
+    )
+
+    add_adk_fastapi_endpoint(
+        app=app,
+        agent=agui_agent_wrapper(build_answer_agent(llm), app_name, user_id),
+        path="/adk_answer",
     )
