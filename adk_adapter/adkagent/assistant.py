@@ -34,21 +34,9 @@ def build_assistant_agent(llm: BaseLlm) -> BaseAgent:
     return base_agent
 
 
-def build_assistant_adk_agent(base_agent: BaseAgent) -> ADKAgent:
-    chat_agent = ADKAgent(
-        adk_agent=base_agent,
-        app_name="demo_app",
-        user_id="demo_user",
-        session_timeout_seconds=3600,
-        use_in_memory_services=True,
-    )
-
-    return chat_agent
-
-
 if __name__ == "__main__":
-    from adk_adapter import adkrun
+    from adk_adapter import adkutil
 
     llm = client_factory.build_llm()
     base_agent = build_assistant_agent(llm)
-    asyncio.run(adkrun.run_agent(base_agent, "hello"))
+    asyncio.run(adkutil.run_agent(base_agent, "hello"))

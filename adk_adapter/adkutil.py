@@ -4,6 +4,19 @@ from google.adk.agents import BaseAgent
 from google.adk.runners import InMemoryRunner
 from google.adk.sessions.session import Session
 from google.genai import types
+from ag_ui_adk import ADKAgent
+
+
+def agui_agent_wrapper(base_agent: BaseAgent, app_name: str, user_id: str) -> ADKAgent:
+    chat_agent = ADKAgent(
+        adk_agent=base_agent,
+        app_name=app_name,
+        user_id=user_id,
+        session_timeout_seconds=3600,
+        use_in_memory_services=True,
+    )
+
+    return chat_agent
 
 
 async def run_agent(base_agent: BaseAgent, message: str):

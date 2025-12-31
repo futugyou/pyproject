@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Callable, Any
 from agent_adapter.agui import register_agents
 
+from adk_adapter.agui import register_adk_agents
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,6 +23,7 @@ app = FastAPI(
 )
 
 register_agents(app)
+register_adk_agents(app)
 
 
 @app.get("/")
