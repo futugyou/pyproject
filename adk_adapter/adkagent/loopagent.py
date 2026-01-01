@@ -155,4 +155,12 @@ if __name__ == "__main__":
 
     llm = client_factory.build_llm()
     base_agent = root_agent(llm)
-    asyncio.run(adkutil.run_agent(base_agent, "Write a story about a cat."))
+    asyncio.run(
+        adkutil.run_agent(
+            base_agent,
+            "a robot developing unexpected emotions",
+            initial_state={
+                STATE_INITIAL_TOPIC: "a robot developing unexpected emotions"
+            },
+        )
+    )

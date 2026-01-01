@@ -19,7 +19,9 @@ def agui_agent_wrapper(base_agent: BaseAgent, app_name: str, user_id: str) -> AD
     return chat_agent
 
 
-async def run_agent(base_agent: BaseAgent, message: str):
+async def run_agent(
+    base_agent: BaseAgent, message: str, initial_state: dict[str, Any] = None
+):
     app_name = "my_app"
     user_id_1 = "user1"
     runner = InMemoryRunner(
@@ -62,7 +64,7 @@ async def run_agent(base_agent: BaseAgent, message: str):
         )
 
     session_1 = await runner.session_service.create_session(
-        app_name=app_name, user_id=user_id_1
+        app_name=app_name, user_id=user_id_1, state=initial_state
     )
 
     print(f"----Session to create memory: {session_1.id} ----------------------")
