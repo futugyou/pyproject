@@ -1,7 +1,7 @@
 from typing import Dict, List
 from pydantic import BaseModel
 from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, BaseAgent
 from google.adk.tools import ToolContext
 from google.adk.models.google_llm import BaseLlm
 
@@ -27,6 +27,11 @@ def answer_question(tool_context: ToolContext, answer: str) -> Dict[str, str]:
         Dict[str, str]: A dictionary indicating success status.
     """
     tool_context.state["answer"] = answer
+    
+    question = tool_context.state.get("question", "")
+    resources = tool_context.state.get("resources", [])
+    print(f"resources is: {resources}, question is: {question}, answer is: {answer}")
+
     return {"status": "success", "message": "Answer stored."}
 
 
@@ -43,6 +48,11 @@ def add_resource(tool_context: ToolContext, resource: str) -> Dict[str, str]:
     resources = tool_context.state.get("resources", [])
     resources.append(resource)
     tool_context.state["resources"] = resources
+
+    question = tool_context.state.get("question", "")
+    answer = tool_context.state.get("answer", "")
+    print(f"resources is: {resources}, question is: {question}, answer is: {answer}")
+
     return {"status": "success", "message": "Resource added."}
 
 
@@ -60,6 +70,7 @@ def build_answer_agent(llm: BaseLlm) -> BaseAgent:
         tools=[answer_question, add_resource],
     )
 
+    print("answer_agent was called.")
     return base_agent
 
 

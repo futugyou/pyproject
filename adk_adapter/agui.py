@@ -48,3 +48,5 @@ def register_adk_agents(app):
         agent=agui_agent_wrapper(build_answer_agent(llm), app_name, user_id),
         path="/adk_answer",
     )
+
+    print("ADK agents registered")
