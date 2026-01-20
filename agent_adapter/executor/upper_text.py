@@ -1,4 +1,4 @@
-from agent_framework import handler, WorkflowContext, Executor
+from agent_framework import handler, WorkflowContext, Executor, ChatMessage, Role
 
 
 class UpperCase(Executor):
@@ -6,8 +6,11 @@ class UpperCase(Executor):
         super().__init__(id=id)
 
     @handler
-    async def to_upper_case(self, text: str, ctx: WorkflowContext[str]) -> None:
-        result = text.upper()
-
-        # Send the result to the next executor in the workflow.
-        await ctx.send_message(result)
+    async def to_upper_case(self, messages: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]) -> None:
+        for i, message in enumerate(messages):
+            if message.role == Role.USER:
+                messages[i] = ChatMessage(
+                    role=message.role,
+                    text=message.text.upper(),
+                )
+        await ctx.send_message(messages)
