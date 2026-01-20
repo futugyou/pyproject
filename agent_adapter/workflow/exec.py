@@ -15,6 +15,7 @@ import random
 from typing_extensions import Never
 from agent_framework import (
     Workflow,
+    ChatMessage,
     WorkflowBuilder,
     WorkflowOutputEvent,
     CheckpointStorage,
@@ -49,9 +50,11 @@ def get_exec_workflow(checkpointStorage: CheckpointStorage | None = None) -> Wor
 
 
 async def main():
-    workflow = get_exec_workflow(PostgresCheckpointStorage(os.getenv("POSTGRES_URI")))
-    output: list[int | float] | None = None
-    async for event in workflow.run_stream([random.randint(1, 100) for _ in range(10)]):
+    workflow = get_exec_workflow()
+    output: list[ChatMessage] | None = None
+    arr = [random.randint(1, 100) for _ in range(10)]
+    msg = [ChatMessage(role="user", text=','.join(map(str, arr)))]
+    async for event in workflow.run_stream(msg):
         if isinstance(event, WorkflowOutputEvent):
             output = event.data
 
@@ -62,8 +65,10 @@ async def main():
 async def run_checkpoint():
     checkpoint_storage = PostgresCheckpointStorage(os.getenv("POSTGRES_URI"))
     workflow = get_exec_workflow(checkpoint_storage)
-    output: list[int | float] | None = None
-    async for event in workflow.run_stream([random.randint(1, 100) for _ in range(10)]):
+    output: list[ChatMessage] | None = None
+    arr = [random.randint(1, 100) for _ in range(10)]
+    msg = [ChatMessage(role="user", text=','.join(map(str, arr)))]
+    async for event in workflow.run_stream(msg):
         if isinstance(event, WorkflowOutputEvent):
             output = event.data
 
@@ -86,5 +91,5 @@ async def run_checkpoint():
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    asyncio.run(run_checkpoint())
+    asyncio.run(main())
+    # asyncio.run(run_checkpoint())

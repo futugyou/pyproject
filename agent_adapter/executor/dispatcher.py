@@ -1,5 +1,5 @@
 from typing_extensions import Never
-from agent_framework import handler, WorkflowContext, Executor
+from agent_framework import handler, WorkflowContext, Executor, ChatMessage, Role
 from .checkpoint import CheckpointExecutor
 
 
@@ -10,8 +10,10 @@ class Dispatcher(CheckpointExecutor):
     """
 
     @handler
-    async def handle(self, numbers: list[int], ctx: WorkflowContext[list[int]]):
-        if not numbers:
-            raise RuntimeError("Input must be a valid list of integers.")
+    async def dispatcher(self, messages: list[ChatMessage], ctx: WorkflowContext[list[int]]):
+        for i, message in enumerate(messages):
+            if message.role == Role.USER:
+                numbers = [int(x) for x in message.text.split(',')]
+            break
         self._messages = numbers
         await ctx.send_message(numbers)
