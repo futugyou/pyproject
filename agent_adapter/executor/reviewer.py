@@ -14,7 +14,7 @@ class Reviewer(Executor):
 
     def __init__(self, chat_client: BaseChatClient, id: str = "reviewer"):
         # Create a domain specific agent using your configured AzureOpenAIChatClient.
-        self.agent = chat_client.create_agent(
+        self.agent = chat_client.as_agent(
             instructions=(
                 "You are an excellent content reviewer."
                 "Provide actionable feedback to the writer about the provided content."

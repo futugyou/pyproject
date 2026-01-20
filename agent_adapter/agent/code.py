@@ -14,7 +14,7 @@ from agent_adapter import client_factory
 
 
 def get_code_agent(client: ChatClientProtocol) -> ChatAgent:
-    agent = client.create_agent(
+    agent = client.as_agent(
         instructions="You are a helpful assistant that can write and execute Python/golang/C# code to solve problems.",
         name="code",
         tools=HostedCodeInterpreterTool(),

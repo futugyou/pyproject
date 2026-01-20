@@ -15,7 +15,7 @@ from agent_adapter.tools.weather import get_weather
 
 
 def get_weather_agent(client: ChatClientProtocol) -> ChatAgent:
-    agent = client.create_agent(
+    agent = client.as_agent(
         instructions="You are a helpful weather assistant",
         name="weather",
         tools=get_weather,

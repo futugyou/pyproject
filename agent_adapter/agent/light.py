@@ -35,7 +35,7 @@ from agent_adapter.middleware.chat import LoggingChatMiddleware
 def get_light_agent(client: ChatClientProtocol) -> ChatAgent:
     chat = LoggingChatMiddleware()
 
-    agent = client.create_agent(
+    agent = client.as_agent(
         instructions="You are a useful light assistant. can tall user the status of the lights and can help user control the lights on and off.\n"
         "When calling a tool, the tool's return value MUST be used as the response to the user. This value is typically in JSON format.",
         name="light",

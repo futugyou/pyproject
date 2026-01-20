@@ -14,7 +14,7 @@ from agent_adapter import client_factory
 
 
 def get_joke_agent(client: ChatClientProtocol) -> ChatAgent:
-    agent = client.create_agent(
+    agent = client.as_agent(
         instructions="You are good at telling jokes.", name="Joker"
     )
     return agent

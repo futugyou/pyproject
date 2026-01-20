@@ -43,7 +43,7 @@ def update_language(
 
 
 def get_state_agent(client: ChatClientProtocol) -> AgentFrameworkAgent:
-    agent = client.create_agent(
+    agent = client.as_agent(
         instructions="You are a helpful assistant",
         name="state_agent",
         tools=[update_language],
