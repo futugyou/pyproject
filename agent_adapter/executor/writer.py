@@ -24,9 +24,8 @@ class Writer(Executor):
 
     @handler
     async def handle(
-        self, message: ChatMessage, ctx: WorkflowContext[list[ChatMessage]]
+        self, messages: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]
     ) -> None:
-        messages: list[ChatMessage] = [message]
         response = await self.agent.run(messages)
         messages.extend(response.messages)
         await ctx.send_message(messages)

@@ -41,7 +41,7 @@ async def main():
     client = client_factory.build_client("openai")
     workflow = get_writing_workflow(client)
     events = await workflow.run(
-        ChatMessage(role="user", text="Write an advertising slogan for Coca-Cola.")
+        [ChatMessage(role="user", text="Write an advertising slogan for Coca-Cola.")]
     )
     # Print agent run events and final outputs
     for event in events:

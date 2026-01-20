@@ -63,11 +63,11 @@ def register_agents(app):
         path="/number-handler",
     )
 
-    # add_agent_framework_fastapi_endpoint(
-    #     app=app,
-    #     agent=get_writing_workflow(client).as_agent(name="writing-handler"),
-    #     path="/writing",
-    # )
+    add_agent_framework_fastapi_endpoint(
+        app=app,
+        agent=get_writing_workflow(client).as_agent(name="writing-handler"),
+        path="/writing",
+    )
 
     add_agent_framework_fastapi_endpoint(
         app=app,
