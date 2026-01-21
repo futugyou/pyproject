@@ -8,6 +8,10 @@ from agent_adapter.agui import register_agents
 
 from adk_adapter.agui import register_adk_agents
 
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module=".*")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
