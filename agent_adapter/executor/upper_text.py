@@ -6,7 +6,9 @@ class UpperCase(Executor):
         super().__init__(id=id)
 
     @handler
-    async def to_upper_case(self, messages: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]) -> None:
+    async def to_upper_case(
+        self, messages: list[ChatMessage], ctx: WorkflowContext[list[ChatMessage]]
+    ) -> None:
         for i, message in enumerate(messages):
             if message.role == Role.USER:
                 messages[i] = ChatMessage(

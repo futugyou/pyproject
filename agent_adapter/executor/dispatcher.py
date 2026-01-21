@@ -10,10 +10,12 @@ class Dispatcher(CheckpointExecutor):
     """
 
     @handler
-    async def dispatcher(self, messages: list[ChatMessage], ctx: WorkflowContext[list[int]]):
+    async def dispatcher(
+        self, messages: list[ChatMessage], ctx: WorkflowContext[list[int]]
+    ):
         for i, message in enumerate(messages):
             if message.role == Role.USER:
-                numbers = [int(x) for x in message.text.split(',')]
+                numbers = [int(x) for x in message.text.split(",")]
             break
         self._messages = numbers
         await ctx.send_message(numbers)

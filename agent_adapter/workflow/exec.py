@@ -53,7 +53,7 @@ async def main():
     workflow = get_exec_workflow()
     output: list[ChatMessage] | None = None
     arr = [random.randint(1, 100) for _ in range(10)]
-    msg = [ChatMessage(role="user", text=','.join(map(str, arr)))]
+    msg = [ChatMessage(role="user", text=",".join(map(str, arr)))]
     async for event in workflow.run_stream(msg):
         if isinstance(event, WorkflowOutputEvent):
             output = event.data
@@ -67,7 +67,7 @@ async def run_checkpoint():
     workflow = get_exec_workflow(checkpoint_storage)
     output: list[ChatMessage] | None = None
     arr = [random.randint(1, 100) for _ in range(10)]
-    msg = [ChatMessage(role="user", text=','.join(map(str, arr)))]
+    msg = [ChatMessage(role="user", text=",".join(map(str, arr)))]
     async for event in workflow.run_stream(msg):
         if isinstance(event, WorkflowOutputEvent):
             output = event.data

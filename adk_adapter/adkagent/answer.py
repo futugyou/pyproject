@@ -27,7 +27,7 @@ def answer_question(tool_context: ToolContext, answer: str) -> Dict[str, str]:
         Dict[str, str]: A dictionary indicating success status.
     """
     tool_context.state["answer"] = answer
-    
+
     question = tool_context.state.get("question", "")
     resources = tool_context.state.get("resources", [])
     print(f"resources is: {resources}, question is: {question}, answer is: {answer}")

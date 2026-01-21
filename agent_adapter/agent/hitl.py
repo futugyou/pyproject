@@ -13,7 +13,6 @@ from typing import Any
 from agent_framework import ChatAgent, ChatClientProtocol, ai_function
 from agent_framework.openai import OpenAIChatClient
 
-from agent_adapter import client_factory
 
 # Based on the official example, I want to understand how the data is generated.
 # https://docs.copilotkit.ai/microsoft-agent-framework/human-in-the-loop
@@ -27,8 +26,14 @@ class StepStatus(str, Enum):
 class TaskStep(BaseModel):
     """A single step in a task execution plan."""
 
-    description: str = Field(..., description="The text of the step in imperative form (e.g., 'Dig hole', 'Open door')")
-    status: StepStatus = Field(default=StepStatus.ENABLED, description="Whether the step is enabled or disabled")
+    description: str = Field(
+        ...,
+        description="The text of the step in imperative form (e.g., 'Dig hole', 'Open door')",
+    )
+    status: StepStatus = Field(
+        default=StepStatus.ENABLED,
+        description="Whether the step is enabled or disabled",
+    )
 
 
 @ai_function(
@@ -36,7 +41,6 @@ class TaskStep(BaseModel):
     description="Generate execution steps for a task",
     approval_mode="always_require",
 )
-
 def generate_task_steps(steps: list[TaskStep]) -> str:
     """Make up 10 steps (only a couple of words per step) that are required for a task.
 
@@ -51,6 +55,7 @@ def generate_task_steps(steps: list[TaskStep]) -> str:
     """
     print(f"Generated {len(steps)} execution steps for the task.")
     return f"Generated {len(steps)} execution steps for the task."
+
 
 # During the first interaction, the backend generates CUSTOM data called `function_approval_request` to indicate that the operation requires user approval.
 # And TOOL_CALL_START data with `"toolCallName":"confirm_changes"`

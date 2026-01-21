@@ -11,6 +11,7 @@ from agent_adapter.agent.mslearn import (
 from agent_adapter.agent.code import get_code_agent
 from agent_adapter.agent.state import get_state_agent
 from agent_adapter.agent.hitl import get_hitl_agent
+from agent_adapter.agent.recipe import get_recipe_agent
 
 from agent_adapter.workflow.text import get_text_workflow
 from agent_adapter.workflow.exec import get_exec_workflow
@@ -80,4 +81,14 @@ def register_agents(app):
         app=app,
         agent=get_hitl_agent(client),
         path="/hitl",
+        state_schema={"steps": {"type": "array"}},
+        predict_state_config={
+            "steps": {"tool": "generate_task_steps", "tool_argument": "steps"}
+        },
+    )
+
+    add_agent_framework_fastapi_endpoint(
+        app=app,
+        agent=get_recipe_agent(client),
+        path="/recipe",
     )
