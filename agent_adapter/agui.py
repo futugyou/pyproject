@@ -13,6 +13,7 @@ from agent_adapter.agent.state import get_state_agent
 from agent_adapter.agent.hitl import get_hitl_agent
 from agent_adapter.agent.recipe import get_recipe_agent
 from agent_adapter.agent.haiku import get_haiku_agent
+from agent_adapter.agent.steps import get_steps_agent
 
 from agent_adapter.workflow.text import get_text_workflow
 from agent_adapter.workflow.exec import get_exec_workflow
@@ -98,4 +99,10 @@ def register_agents(app):
         app=app,
         agent=get_haiku_agent(client),
         path="/haiku",
+    )
+
+    add_agent_framework_fastapi_endpoint(
+        app=app,
+        agent=get_steps_agent(client),
+        path="/steps",
     )
