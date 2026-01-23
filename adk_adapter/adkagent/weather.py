@@ -129,18 +129,6 @@ def build_weather_agent(llm: BaseLlm) -> BaseAgent:
     return base_agent
 
 
-def build_weather_adk_agent(base_agent: BaseAgent) -> ADKAgent:
-    chat_agent = ADKAgent(
-        adk_agent=base_agent,
-        app_name="demo_app",
-        user_id="demo_user",
-        session_timeout_seconds=3600,
-        use_in_memory_services=True,
-    )
-
-    return chat_agent
-
-
 if __name__ == "__main__":
     import asyncio
     from adk_adapter import adkrun
