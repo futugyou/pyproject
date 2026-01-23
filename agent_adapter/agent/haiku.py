@@ -9,8 +9,8 @@ from typing import Any, TypedDict
 
 from agent_framework import AIFunction, ChatAgent, ChatClientProtocol, ChatOptions
 from agent_framework.ag_ui import AgentFrameworkAgent
- 
-from typing_extensions import TypeVar 
+
+from typing_extensions import TypeVar
 
 # https://github.com/microsoft/agent-framework/blob/main/python/packages/ag-ui/agent_framework_ag_ui_examples/agents/ui_generator_agent.py
 generate_haiku = AIFunction[Any, str](

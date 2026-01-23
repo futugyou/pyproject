@@ -14,6 +14,7 @@ from agent_framework import ChatAgent, ChatClientProtocol, ai_function
 from agent_framework.openai import OpenAIChatClient
 from agent_framework.ag_ui import AgentFrameworkAgent, RecipeConfirmationStrategy
 
+
 # Based on the official example, I want to understand how the data is generated.
 # https://docs.copilotkit.ai/microsoft-agent-framework/shared-state/in-app-agent-read
 class SkillLevel(str, Enum):

@@ -26,23 +26,24 @@ DEFINE_TASK_TOOL = {
                         "properties": {
                             "description": {
                                 "type": "string",
-                                "description": "The text of the step in imperative form"
+                                "description": "The text of the step in imperative form",
                             },
                             "status": {
                                 "type": "string",
                                 "enum": ["enabled"],
-                                "description": "The status of the step, always 'enabled'"
-                            }
+                                "description": "The status of the step, always 'enabled'",
+                            },
                         },
-                        "required": ["description", "status"]
+                        "required": ["description", "status"],
                     },
-                    "description": "An array of 10 step objects, each containing text and status"
+                    "description": "An array of 10 step objects, each containing text and status",
                 }
             },
-            "required": ["steps"]
-        }
-    }
+            "required": ["steps"],
+        },
+    },
 }
+
 
 def build_hitl_agent(llm: BaseLlm) -> BaseAgent:
     base_agent = LlmAgent(
@@ -97,7 +98,7 @@ def build_hitl_agent(llm: BaseLlm) -> BaseAgent:
         generate_content_config=types.GenerateContentConfig(
             temperature=0.7,  # Slightly higher temperature for creativity
             top_p=0.9,
-            top_k=40
+            top_k=40,
         ),
     )
 

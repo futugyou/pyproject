@@ -22,9 +22,16 @@ from ag_ui.core import (
     TextMessageStartEvent,
     ToolCallStartEvent,
 )
-from agent_framework import ChatAgent, ChatClientProtocol, ChatMessage, TextContent, ai_function
+from agent_framework import (
+    ChatAgent,
+    ChatClientProtocol,
+    ChatMessage,
+    TextContent,
+    ai_function,
+)
 from agent_framework.ag_ui import AgentFrameworkAgent
 from pydantic import BaseModel, Field
+
 
 # https://github.com/microsoft/agent-framework/blob/main/python/packages/ag-ui/agent_framework_ag_ui_examples/agents/task_steps_agent.py
 class StepStatus(str, Enum):
@@ -38,9 +45,12 @@ class TaskStep(BaseModel):
     """A single step in a task."""
 
     description: str = Field(
-        ..., description="The text of the step in gerund form (e.g., 'Digging hole', 'Opening door')"
+        ...,
+        description="The text of the step in gerund form (e.g., 'Digging hole', 'Opening door')",
     )
-    status: StepStatus = Field(default=StepStatus.PENDING, description="The status of the step")
+    status: StepStatus = Field(
+        default=StepStatus.PENDING, description="The status of the step"
+    )
 
 
 @ai_function
@@ -56,7 +66,10 @@ def generate_task_steps(steps: list[TaskStep]) -> str:
     print(f"generate_task_steps called with {len(steps)} steps")
     return "Steps generated."
 
-def _create_task_steps_agent(chat_client: ChatClientProtocol[Any]) -> AgentFrameworkAgent:
+
+def _create_task_steps_agent(
+    chat_client: ChatClientProtocol[Any],
+) -> AgentFrameworkAgent:
     """Create the task steps agent using tool-based approach for streaming.
 
     Args:
@@ -133,7 +146,7 @@ class TaskStepsAgentWithExecution:
         return getattr(self._base_agent, name)
 
     async def run_agent(self, input_data: dict[str, Any]) -> AsyncGenerator[Any, None]:
-        """Run the agent and then simulate step execution.""" 
+        """Run the agent and then simulate step execution."""
         import uuid
 
         print("TaskStepsAgentWithExecution.run_agent() called - wrapper is active")
@@ -145,7 +158,9 @@ class TaskStepsAgentWithExecution:
         buffered_text_events: list[Any] = []  # Buffer text from first LLM call
 
         async for event in self._base_agent.run_agent(input_data):
-            event_type_str = str(event.type) if hasattr(event, "type") else type(event).__name__
+            event_type_str = (
+                str(event.type) if hasattr(event, "type") else type(event).__name__
+            )
             print(f"Processing event: {event_type_str}")
 
             match event:
@@ -157,7 +172,10 @@ class TaskStepsAgentWithExecution:
                     # Apply state delta to final_state
                     if delta:
                         for patch in delta:
-                            if patch.get("op") == "replace" and patch.get("path") == "/steps":
+                            if (
+                                patch.get("op") == "replace"
+                                and patch.get("path") == "/steps"
+                            ):
                                 final_state["steps"] = patch.get("value", [])
                                 print(
                                     f"Applied STATE_DELTA: updated steps to {len(final_state.get('steps', []))} items"
@@ -166,12 +184,18 @@ class TaskStepsAgentWithExecution:
                     yield event
                 case RunFinishedEvent():
                     run_finished_event = event
-                    print("Captured RUN_FINISHED event - will send after step execution and summary")
+                    print(
+                        "Captured RUN_FINISHED event - will send after step execution and summary"
+                    )
                 case ToolCallStartEvent(tool_call_id=call_id):
                     tool_call_id = call_id
                     print(f"Captured tool_call_id: {tool_call_id}")
                     yield event
-                case TextMessageStartEvent() | TextMessageContentEvent() | TextMessageEndEvent():
+                case (
+                    TextMessageStartEvent()
+                    | TextMessageContentEvent()
+                    | TextMessageEndEvent()
+                ):
                     buffered_text_events.append(event)
                     print(f"Buffered {event_type_str} from first LLM call")
                 case _:
@@ -186,7 +210,9 @@ class TaskStepsAgentWithExecution:
             print(f"Starting step execution simulation for {len(steps)} steps")
 
             for i in range(len(steps)):
-                print(f"Simulating execution of step {i + 1}/{len(steps)}: {steps[i].get('description')}")
+                print(
+                    f"Simulating execution of step {i + 1}/{len(steps)}: {steps[i].get('description')}"
+                )
                 await asyncio.sleep(1.0)  # Simulate work
 
                 # Update step to completed
@@ -270,7 +296,9 @@ class TaskStepsAgentWithExecution:
 
                 # Stream completion
                 accumulated_text = ""
-                async for chunk in chat_client.get_streaming_response(messages=messages):
+                async for chunk in chat_client.get_streaming_response(
+                    messages=messages
+                ):
                     # chunk is ChatResponseUpdate
                     if hasattr(chunk, "text") and chunk.text:
                         accumulated_text += chunk.text
@@ -324,7 +352,9 @@ class TaskStepsAgentWithExecution:
                     message_id=error_message_id,
                 )
         else:
-            logger.warning(f"No steps found in final_state to execute. final_state={final_state}")
+            logger.warning(
+                f"No steps found in final_state to execute. final_state={final_state}"
+            )
 
         # Finally send the original RUN_FINISHED event
         if run_finished_event:
@@ -332,7 +362,9 @@ class TaskStepsAgentWithExecution:
             yield run_finished_event
 
 
-def get_steps_agent(chat_client: ChatClientProtocol[Any]) -> TaskStepsAgentWithExecution:
+def get_steps_agent(
+    chat_client: ChatClientProtocol[Any],
+) -> TaskStepsAgentWithExecution:
     """Create a task steps agent with execution simulation.
 
     Args:

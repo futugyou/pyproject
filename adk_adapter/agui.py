@@ -6,6 +6,7 @@ from adk_adapter.adkagent.weather import build_weather_agent
 from adk_adapter.adkagent.state import build_state_agent
 from adk_adapter.adkagent.answer import build_answer_agent
 from adk_adapter.adkagent.hitl import build_hitl_agent
+from adk_adapter.adkagent.recipe import build_recipe_agent
 
 from adk_adapter import client_factory
 
@@ -17,8 +18,7 @@ def register_adk_agents(app):
 
     add_adk_fastapi_endpoint(
         app=app,
-        agent=agui_agent_wrapper(
-            build_assistant_agent(llm), app_name, user_id),
+        agent=agui_agent_wrapper(build_assistant_agent(llm), app_name, user_id),
         path="/adk_assistant",
     )
 
@@ -44,6 +44,12 @@ def register_adk_agents(app):
         app=app,
         agent=agui_agent_wrapper(build_hitl_agent(llm), app_name, user_id),
         path="/adk_hitl",
+    )
+
+    add_adk_fastapi_endpoint(
+        app=app,
+        agent=agui_agent_wrapper(build_recipe_agent(llm), app_name, user_id),
+        path="/adk_recipe",
     )
 
     print("ADK agents registered")
