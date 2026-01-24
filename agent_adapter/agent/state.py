@@ -10,7 +10,7 @@ from typing import Annotated
 from pydantic import Field
 from agent_framework import ChatAgent, ai_function, ChatClientProtocol
 from agent_framework.openai import OpenAIChatClient
-from agent_framework.ag_ui import AgentFrameworkAgent, RecipeConfirmationStrategy
+from agent_framework.ag_ui import AgentFrameworkAgent
 
 from agent_adapter import client_factory
 
@@ -55,6 +55,5 @@ def get_state_agent(client: ChatClientProtocol) -> AgentFrameworkAgent:
         description="Assistant that tracks a simple language state.",
         state_schema=STATE_SCHEMA,
         predict_state_config=PREDICT_STATE_CONFIG,
-        confirmation_strategy=RecipeConfirmationStrategy(),
         require_confirmation=False,
     )

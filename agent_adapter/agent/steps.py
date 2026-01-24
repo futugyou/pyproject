@@ -26,7 +26,7 @@ from agent_framework import (
     ChatAgent,
     ChatClientProtocol,
     ChatMessage,
-    TextContent,
+    Content,
     ai_function,
 )
 from agent_framework.ag_ui import AgentFrameworkAgent
@@ -261,7 +261,7 @@ class TaskStepsAgentWithExecution:
                         messages.append(
                             ChatMessage(
                                 role=msg.get("role", "user"),
-                                contents=[TextContent(text=content_str)],
+                                contents=[Content.from_text(text=content_str)],
                             )
                         )
                 elif isinstance(msg, ChatMessage):
@@ -272,7 +272,7 @@ class TaskStepsAgentWithExecution:
                 ChatMessage(
                     role="user",
                     contents=[
-                        TextContent(
+                        Content.from_text(
                             text="The steps have been successfully executed. Provide a brief one-sentence summary."
                         )
                     ],

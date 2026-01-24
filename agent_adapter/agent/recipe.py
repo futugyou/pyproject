@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 from agent_framework import ChatAgent, ChatClientProtocol, ai_function
 from agent_framework.openai import OpenAIChatClient
-from agent_framework.ag_ui import AgentFrameworkAgent, RecipeConfirmationStrategy
+from agent_framework.ag_ui import AgentFrameworkAgent
 
 
 # Based on the official example, I want to understand how the data is generated.
@@ -143,6 +143,5 @@ def get_recipe_agent(chat_client: ChatClientProtocol[Any]) -> AgentFrameworkAgen
         predict_state_config={
             "recipe": {"tool": "update_recipe", "tool_argument": "recipe"},
         },
-        confirmation_strategy=RecipeConfirmationStrategy(),
         require_confirmation=False,
     )
