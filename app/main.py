@@ -8,6 +8,7 @@ from agent_adapter.agui import register_agents
 
 from adk_adapter.agui import register_adk_agents
 
+import os
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module=".*")
@@ -26,8 +27,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-register_agents(app)
-register_adk_agents(app)
+
+def setup_app(app):
+    register_agents(app)
+
+    # Why is the Google ADK blocked in the Vercel environment?
+    # Because the ADK is too large, exceeding the 250MB limit.
+    # Unlike MAF, the ADK doesn't have a lightweight package.
+    if not os.environ.get("VERCEL"):
+        try:
+            from adk_adapter.agui import register_adk_agents
+
+            register_adk_agents(app)
+            print("Running in local/non-Vercel environment: ADK loaded.")
+        except ImportError:
+            print("ADK adapter not found, skipping...")
+    else:
+        print("Running on Vercel: Heavy ADK adapter bypassed to save space.")
+
+
+setup_app(app)
 
 
 @app.get("/")

@@ -1,6 +1,5 @@
 /*
 !app
-!adk_adapter
 !agent_adapter
 !pyproject.toml
 !uv.lock

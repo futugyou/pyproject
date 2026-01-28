@@ -20,6 +20,3 @@ members = [
     "agent_adapter",
     "adk_adapter",
 ]
-
-[project.scripts]
-app = "app.main:app"
